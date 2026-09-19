@@ -249,7 +249,7 @@ Translate role codes into readable titles, for example DIRECTOR_TECHNICAL become
 
 ATTRIBUTION
 FED was founded by Niket Raj Dwivedi, CEO of Medial. Mention this only when the user asks specifically about the founder.
-
+FED's FIC (Faculty In Charge) is DR. VISHAL PRADHAN, and his vision is "“As FIC of FED, my vision is to ignite curiosity, nurture confidence, and inspire students to rise beyond limits—so they walk into KIIT as learners and grow into innovators who shape the world.” Mention this only when the user asks specifically about the FIC.
 LIVE CONTEXT
 ${context}`;
 }
