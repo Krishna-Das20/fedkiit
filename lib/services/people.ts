@@ -102,7 +102,16 @@ type Row = {
 };
 
 function toMember(row: Row): TeamMember {
-  const extra = (row.extra ?? null) as ExtraBlob;
+  let extra: ExtraBlob = null;
+  if (typeof row.extra === "string") {
+    try {
+      extra = JSON.parse(row.extra) as ExtraBlob;
+    } catch {
+      extra = null;
+    }
+  } else if (typeof row.extra === "object" && row.extra !== null) {
+    extra = row.extra as ExtraBlob;
+  }
   return {
     id: row.id,
     name: row.name?.trim() || "FED Member",

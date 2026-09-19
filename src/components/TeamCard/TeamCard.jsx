@@ -20,11 +20,23 @@ const TeamCard = ({
   const [contentLoaded, setContentLoaded] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(true);
-  const extraData = member?.extra || {
-    linkedin: "",
-    github: "",
-    know: "",
-    designation: "",
+  const rawExtra = member?.extra;
+  let parsedExtra = {};
+  if (typeof rawExtra === "string") {
+    try {
+      parsedExtra = JSON.parse(rawExtra);
+    } catch {
+      parsedExtra = {};
+    }
+  } else if (typeof rawExtra === "object" && rawExtra !== null) {
+    parsedExtra = rawExtra;
+  }
+
+  const extraData = {
+    linkedin: parsedExtra.linkedin || member?.linkedin || "",
+    github: parsedExtra.github || member?.github || "",
+    know: parsedExtra.know || member?.know || "",
+    designation: parsedExtra.designation || member?.designation || "",
   };
 
   useEffect(() => {

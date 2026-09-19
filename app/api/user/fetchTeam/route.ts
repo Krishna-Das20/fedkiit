@@ -26,6 +26,21 @@ export async function GET() {
       return expressError(404, "No teams found");
     }
 
-    return json({ success: true, data: users });
+    const normalizedUsers = users.map((u) => {
+      let extra = u.extra;
+      if (typeof extra === "string") {
+        try {
+          extra = JSON.parse(extra);
+        } catch {
+          extra = {};
+        }
+      }
+      return {
+        ...u,
+        extra: extra || {},
+      };
+    });
+
+    return json({ success: true, data: normalizedUsers });
   });
 }
