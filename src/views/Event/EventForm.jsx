@@ -9,6 +9,7 @@ import AuthContext from "../../context/AuthContext";
 import { api } from "../../services";
 import { Alert, ComponentLoading } from "../../microInteraction";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { getEventSlug } from "../../utils/slug";
 import style from "./styles/EventForm.module.scss";
 
 /**
@@ -116,7 +117,7 @@ const EventForm = () => {
   // overlay, so locking the page would strand a long form with no way to reach
   // its own submit button.
 
-  const backHref = `/Events/${eventId}`;
+  const backHref = `/Events/${getEventSlug(eventData) || eventId}`;
 
   return (
     <div className={style.page}>

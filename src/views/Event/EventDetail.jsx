@@ -21,6 +21,7 @@ import {
   isBatchRegistrationBlocked,
 } from "../../utils/batchRestriction";
 import { MarkdownContent } from "../../components/Core";
+import { getEventSlug, matchEvent } from "../../utils/slug";
 import style from "./styles/EventDetail.module.scss";
 
 /**
@@ -73,7 +74,7 @@ const EventDetail = () => {
           const fetchedEvents = response.data.events ?? [];
           setOngoingEvents(fetchedEvents.filter((e) => !e.info.isEventPast));
 
-          const eventData = fetchedEvents.find((e) => e.id === eventId);
+          const eventData = fetchedEvents.find((e) => matchEvent(e, eventId));
           if (eventData) {
             setData(eventData);
             setInfo(eventData.info ?? {});
@@ -224,7 +225,8 @@ const EventDetail = () => {
     // The modal waited three seconds before navigating, purely to let a toast
     // finish. On a page that just reads as an unresponsive button.
     setIsMicroLoading(true);
-    router.push(`/Events/${data?.id}/Form`);
+    const eventSlug = getEventSlug(data) || data?.id;
+    router.push(`/Events/${eventSlug}/Form`);
   };
 
   const formattedDate = (() => {

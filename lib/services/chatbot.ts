@@ -8,6 +8,7 @@ import { FAQS, SITE, SOCIALS } from "@/lib/site";
 import { getUpcomingEvents } from "@/lib/services/events";
 import { getLatestPosts } from "@/lib/services/blogs";
 import { getTeam, humanizeAccess } from "@/lib/services/people";
+import { getEventSlug } from "@/lib/utils/slug";
 
 /**
  * The FED chatbot, ported from `controllers/chatbot/*`.
@@ -70,24 +71,21 @@ async function buildContext(): Promise<string> {
       ]
         .filter(Boolean)
         .join(", ");
-      return `- ${m.name} — ${m.title || humanizeAccess(m.access)}${
-        m.year ? ` (year ${m.year})` : ""
-      }${links ? ` [${links}]` : ""}`;
+      return `- ${m.name} — ${m.title || humanizeAccess(m.access)}${m.year ? ` (year ${m.year})` : ""
+        }${links ? ` [${links}]` : ""}`;
     })
     .join("\n");
 
   const eventLines = events.length
     ? events
-        .slice(0, 12)
-        .map(
-          (e) =>
-            `- ${e.title}${e.dateLabel ? ` on ${e.dateLabel}` : ""} — ${
-              e.isPaid ? `paid, Rs ${e.amount}` : "free"
-            }, ${e.participationType.toLowerCase()} entry, ${
-              e.isRegistrationOpen ? "registration open" : "registration closed"
-            }. Details: /events/${e.id}`,
-        )
-        .join("\n")
+      .slice(0, 12)
+      .map(
+        (e) =>
+          `- ${e.title}${e.dateLabel ? ` on ${e.dateLabel}` : ""} — ${e.isPaid ? `paid, Rs ${e.amount}` : "free"
+          }, ${e.participationType.toLowerCase()} entry, ${e.isRegistrationOpen ? "registration open" : "registration closed"
+          }. Details: /Events/${getEventSlug(e.title) || e.id}`,
+      )
+      .join("\n")
     : "- No upcoming events are published right now.";
 
   const postLines = posts.length

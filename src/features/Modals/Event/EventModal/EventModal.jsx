@@ -18,6 +18,7 @@ import { FaUser, FaRupeeSign } from "react-icons/fa";
 import { CiLock } from "react-icons/ci";
 import { PiClockCountdownDuotone } from "react-icons/pi";
 import AuthContext from "../../../../context/AuthContext";
+import { getEventSlug } from "../../../../utils/slug";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { SkeletonTheme } from "react-loading-skeleton";
@@ -336,7 +337,8 @@ const EventModal = (props) => {
           duration: 4000,
         });
       } else {
-        setNavigatePath("/Events/" + data?.id + "/Form");
+        const slug = getEventSlug(data) || data?.id;
+        setNavigatePath("/Events/" + slug + "/Form");
         setTimeout(() => {
           setShouldNavigate(true);
         }, 3000);

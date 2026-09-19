@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { expressError, handle, json } from "@/lib/api/express";
 import { getCurrentUser } from "@/lib/auth/access";
+import { matchEvent } from "@/lib/utils/slug";
 import type { EventInfo } from "@/lib/types/event";
 
 /**
@@ -27,16 +28,23 @@ export async function GET(
 
     const { formId } = await ctx.params;
     if (!formId) return expressError(400, "Form ID is required");
-    // A malformed id makes Prisma throw; answer as "not found" instead.
+
+    let targetFormId = formId;
     if (!/^[a-f\d]{24}$/i.test(formId)) {
-      return expressError(
-        404,
-        "No team registration found for this user in the specified form",
-      );
+      const allForms = await prisma.form.findMany({ select: { id: true, info: true } });
+      const matched = allForms.find((f) => matchEvent(f, formId));
+      if (matched) {
+        targetFormId = matched.id;
+      } else {
+        return expressError(
+          404,
+          "No team registration found for this user in the specified form",
+        );
+      }
     }
 
     const teamRegistration = await prisma.formRegistration.findFirst({
-      where: { formId, regTeamMemEmails: { has: user.email } },
+      where: { formId: targetFormId, regTeamMemEmails: { has: user.email } },
       include: { form: { select: { info: true } } },
     });
 

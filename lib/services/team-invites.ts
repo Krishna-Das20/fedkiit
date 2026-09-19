@@ -9,6 +9,7 @@ import { sendMail } from "@/lib/email/mailer";
 import { envList, getEnv, siteUrl } from "@/lib/env";
 import type { EventInfo } from "@/lib/types/event";
 import { UNAFFILIATED } from "@/lib/services/teams";
+import { getEventSlug } from "@/lib/utils/slug";
 
 /**
  * Team invitations and join requests.
@@ -117,7 +118,8 @@ export async function getTeamInviteLink(formId: string, user: SafeUser) {
 
   const info = (registration.form.info ?? {}) as EventInfo;
   const base = await originUrl();
-  const inviteLink = `${base}/Events/${registration.form.id}/Form?teamCode=${registration.teamCode}`;
+  const slug = getEventSlug(info.eventTitle) || registration.form.id;
+  const inviteLink = `${base}/Events/${slug}/Form?teamCode=${registration.teamCode}`;
 
   const shareText =
     `Join my team "${registration.teamName}" for ${info.eventTitle || "an event"}!\n\n` +
@@ -161,7 +163,8 @@ export async function inviteTeamMember(input: {
   }
 
   const base = await originUrl();
-  const inviteLink = `${base}/Events/${registration.form.id}/Form?teamCode=${registration.teamCode}`;
+  const slug = getEventSlug(info.eventTitle) || registration.form.id;
+  const inviteLink = `${base}/Events/${slug}/Form?teamCode=${registration.teamCode}`;
   const eventTitle = info.eventTitle || "an event";
 
   const result = await sendMail({
