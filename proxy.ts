@@ -84,6 +84,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
+  if (pathname.startsWith("/events/")) {
+    const url = new URL(`/Events/${pathname.slice(8)}`, request.url);
+    url.search = search;
+    return NextResponse.redirect(url, 308);
+  }
+
   // 2. Route protection.
   const isProtected = PROTECTED_PREFIXES.some(
     (prefix) =>

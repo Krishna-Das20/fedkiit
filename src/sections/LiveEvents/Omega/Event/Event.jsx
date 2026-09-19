@@ -10,6 +10,7 @@ import AuthContext from "../../../../context/AuthContext";
 import styles from "./styles/Event.module.scss";
 import { Alert, MicroLoading } from "../../../../microInteraction"; // Ensure this import path is correct
 import { useRouter } from "next/navigation";
+import { getEventSlug } from "../../../../utils/slug";
 
 function EventCard({ data, isRegisteredInRelatedEvents, ongoingEvents }) {
   const authCtx = useContext(AuthContext);
@@ -163,7 +164,8 @@ function EventCard({ data, isRegisteredInRelatedEvents, ongoingEvents }) {
       setIsMicroLoading(true);
       setTimeout(() => {
         setIsMicroLoading(false);
-        router.push(`/Events/${data.id}/Form`);
+        const slug = getEventSlug(data) || data.id;
+        router.push(`/Events/${slug}/Form`);
       }, 1500);
     } else if (btnTxt === "Registered") {
       setAlert({

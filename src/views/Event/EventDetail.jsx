@@ -197,7 +197,8 @@ const EventDetail = () => {
   const handleForm = () => {
     if (!authCtx.isLoggedIn) {
       sessionStorage.setItem("prevPage", window.location.pathname);
-      router.push(`/Login?next=/Events/${eventId}`);
+      const slug = getEventSlug(data) || eventId;
+      router.push(`/Login?next=/Events/${slug}`);
       return;
     }
 

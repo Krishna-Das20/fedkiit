@@ -60,7 +60,8 @@ const EventForm = () => {
           position: "bottom-right",
           duration: 3000,
         });
-        router.replace(`/Events/${formId}/team`);
+        const slug = getEventSlug(eventData) || eventId || formId;
+        router.replace(`/Events/${slug}/team`);
         return true;
       }
     } catch (err) {
@@ -72,7 +73,8 @@ const EventForm = () => {
         duration: 3000,
       });
       // If already on another team or error, redirect to team management
-      router.replace(`/Events/${formId}/team`);
+      const slug = getEventSlug(eventData) || eventId || formId;
+      router.replace(`/Events/${slug}/team`);
       return false;
     }
   }, [router]);
