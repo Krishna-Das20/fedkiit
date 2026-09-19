@@ -37,6 +37,10 @@ export async function DELETE(
       data: { access: "USER", extra: {} },
     });
 
-    return json({ success: true, message: "Member removed successfully" });
+    return json({
+      success: true,
+      message: "Member removed successfully",
+      user: { id },
+    });
   });
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useCallback } from "react";
 import axios from "axios";
 import styles from "./styles/ViewMember.module.scss";
 import { Button, TeamCard } from "../../../../../components";
@@ -27,23 +27,23 @@ function ViewMember() {
     }
   }, [alert]);
 
-  useEffect(() => {
-    const fetchMemberData = async () => {
-      try {
-        setLoading(true);
-        const response = await api.get("/api/user/fetchTeam");
-        const fetchedMembers = response.data.data;
-        setMembers(fetchedMembers);
-      } catch (error) {
-        console.error("Error fetching member data:", error);
-        // No local fallback: this used to load Team.json, so a failed
-        // fetch showed admins a roster of sample members that looked real.
-        setMembers([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchMemberData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await api.get("/api/user/fetchTeam");
+      const fetchedMembers = response.data.data;
+      setMembers(fetchedMembers);
+    } catch (error) {
+      console.error("Error fetching member data:", error);
+      // No local fallback: this used to load Team.json, so a failed
+      // fetch showed admins a roster of sample members that looked real.
+      setMembers([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
+  useEffect(() => {
     const fetchAccessTypes = async () => {
       try {
         const response = await api.get("/api/user/fetchAccessTypes");
@@ -82,7 +82,7 @@ function ViewMember() {
 
     fetchAccessTypes();
     fetchMemberData();
-  }, []);
+  }, [fetchMemberData]);
 
   const handleButtonClick = (menu) => {
     if (menu === "add member" && enablingUpdate) {
@@ -203,8 +203,9 @@ function ViewMember() {
           position: "bottom-right",
           duration: 3000,
         });
-        setMembers((members) =>
-          members.filter((m) => m.id !== response.data.user.id)
+        const removedId = response.data?.user?.id || id;
+        setMembers((prevMembers) =>
+          prevMembers.filter((m) => m.id !== removedId)
         );
       }
     } catch (error) {
@@ -239,7 +240,12 @@ function ViewMember() {
           {loading ? (
             <ComponentLoading /> // Show loading component
           ) : memberActivePage.toLowerCase() === "add member" ? (
-            <AddMemberForm />
+            <AddMemberForm
+              onSuccess={() => {
+                fetchMemberData();
+                setEnable(false);
+              }}
+            />
           ) : (
             <div className={styles.teamGrid}>
               {membersToDisplay.map((member, idx) => (
