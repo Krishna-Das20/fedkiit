@@ -18,6 +18,7 @@ import { FaUser, FaRupeeSign } from "react-icons/fa";
 import { CiLock } from "react-icons/ci";
 import { PiClockCountdownDuotone } from "react-icons/pi";
 import AuthContext from "../../../../context/AuthContext";
+import { getEventSlug } from "../../../../utils/slug";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { SkeletonTheme } from "react-loading-skeleton";
@@ -30,6 +31,11 @@ import {
 } from "../../../../microInteraction";
 import { api } from "../../../../services";
 import { parse, differenceInMilliseconds, formatDistanceToNow } from "date-fns";
+import { MarkdownContent } from "../../../../components/Core";
+import {
+  batchRegistrationErrorMessage,
+  isBatchRegistrationBlocked,
+} from "../../../../utils/batchRestriction";
 import eventDefaultImg from "../../../../assets/images/defaultEventModal.png";
 import { useRouter, useParams } from "next/navigation";
 
@@ -322,8 +328,17 @@ const EventModal = (props) => {
           position: "bottom-right",
           duration: 3000,
         });
+      } else if (isBatchRegistrationBlocked(authCtx.user.email)) {
+        setIsMicroLoading(false);
+        setAlert({
+          type: "info",
+          message: batchRegistrationErrorMessage(),
+          position: "bottom-right",
+          duration: 4000,
+        });
       } else {
-        setNavigatePath("/Events/" + data?.id + "/Form");
+        const slug = getEventSlug(data) || data?.id;
+        setNavigatePath("/Events/" + slug + "/Form");
         setTimeout(() => {
           setShouldNavigate(true);
         }, 3000);
@@ -596,12 +611,7 @@ const EventModal = (props) => {
                       </div>
                     </div>
                     <div className={EventCardModal.backtxt}>
-                      {info.eventdescription.split("\n").map((line, index) => (
-                        <React.Fragment key={index}>
-                          {line}
-                          <br />
-                        </React.Fragment>
-                      ))}
+                      <MarkdownContent>{info.eventdescription}</MarkdownContent>
                     </div>
                   </div>
                 )}

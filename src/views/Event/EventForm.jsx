@@ -9,6 +9,7 @@ import AuthContext from "../../context/AuthContext";
 import { api } from "../../services";
 import { Alert, ComponentLoading } from "../../microInteraction";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { getEventSlug } from "../../utils/slug";
 import style from "./styles/EventForm.module.scss";
 
 /**
@@ -59,7 +60,8 @@ const EventForm = () => {
           position: "bottom-right",
           duration: 3000,
         });
-        router.replace(`/Events/${formId}/team`);
+        const slug = getEventSlug(eventData) || eventId || formId;
+        router.replace(`/Events/${slug}/team`);
         return true;
       }
     } catch (err) {
@@ -71,7 +73,8 @@ const EventForm = () => {
         duration: 3000,
       });
       // If already on another team or error, redirect to team management
-      router.replace(`/Events/${formId}/team`);
+      const slug = getEventSlug(eventData) || eventId || formId;
+      router.replace(`/Events/${slug}/team`);
       return false;
     }
   }, [router]);
@@ -116,7 +119,7 @@ const EventForm = () => {
   // overlay, so locking the page would strand a long form with no way to reach
   // its own submit button.
 
-  const backHref = `/Events/${eventId}`;
+  const backHref = `/Events/${getEventSlug(eventData) || eventId}`;
 
   return (
     <div className={style.page}>

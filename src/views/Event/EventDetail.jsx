@@ -16,6 +16,12 @@ import { api } from "../../services";
 import { Alert, MicroLoading, ComponentLoading } from "../../microInteraction";
 import Share from "../../features/Modals/Event/ShareModal/ShareModal";
 import { isPrerequisiteMet } from "../../utils/prerequisite";
+import {
+  batchRegistrationErrorMessage,
+  isBatchRegistrationBlocked,
+} from "../../utils/batchRestriction";
+import { MarkdownContent } from "../../components/Core";
+import { getEventSlug, matchEvent } from "../../utils/slug";
 import style from "./styles/EventDetail.module.scss";
 
 /**
@@ -68,7 +74,7 @@ const EventDetail = () => {
           const fetchedEvents = response.data.events ?? [];
           setOngoingEvents(fetchedEvents.filter((e) => !e.info.isEventPast));
 
-          const eventData = fetchedEvents.find((e) => e.id === eventId);
+          const eventData = fetchedEvents.find((e) => matchEvent(e, eventId));
           if (eventData) {
             setData(eventData);
             setInfo(eventData.info ?? {});
@@ -172,6 +178,11 @@ const EventDetail = () => {
       return;
     }
 
+    if (isBatchRegistrationBlocked(authCtx.user?.email)) {
+      setBtnTxt(info.isRegistrationClosed || info.isEventPast ? "Closed" : "Not Eligible");
+      return;
+    }
+
     setBtnTxt(openState());
   }, [
     authCtx.isLoggedIn,
@@ -186,7 +197,8 @@ const EventDetail = () => {
   const handleForm = () => {
     if (!authCtx.isLoggedIn) {
       sessionStorage.setItem("prevPage", window.location.pathname);
-      router.push(`/Login?next=/Events/${eventId}`);
+      const slug = getEventSlug(data) || eventId;
+      router.push(`/Login?next=/Events/${slug}`);
       return;
     }
 
@@ -201,10 +213,21 @@ const EventDetail = () => {
       return;
     }
 
+    if (isBatchRegistrationBlocked(authCtx.user.email)) {
+      setAlert({
+        type: "info",
+        message: batchRegistrationErrorMessage(),
+        position: "bottom-right",
+        duration: 4000,
+      });
+      return;
+    }
+
     // The modal waited three seconds before navigating, purely to let a toast
     // finish. On a page that just reads as an unresponsive button.
     setIsMicroLoading(true);
-    router.push(`/Events/${data?.id}/Form`);
+    const eventSlug = getEventSlug(data) || data?.id;
+    router.push(`/Events/${eventSlug}/Form`);
   };
 
   const formattedDate = (() => {
@@ -327,14 +350,7 @@ const EventDetail = () => {
 
           {info.eventdescription && (
             <div className={style.description}>
-              {String(info.eventdescription)
-                .split("\n")
-                .map((line, index) => (
-                  <React.Fragment key={index}>
-                    {line}
-                    <br />
-                  </React.Fragment>
-                ))}
+              <MarkdownContent>{String(info.eventdescription)}</MarkdownContent>
             </div>
           )}
 
@@ -358,6 +374,11 @@ const EventDetail = () => {
                   Locked
                   <IoIosLock aria-hidden="true" />
                 </>
+              ) : btnTxt === "Not Eligible" ? (
+                <>
+                  Not eligible
+                  <IoIosLock aria-hidden="true" />
+                </>
               ) : remainingTime && btnTxt === remainingTime ? (
                 <>
                   <PiClockCountdownDuotone aria-hidden="true" />
@@ -373,6 +394,9 @@ const EventDetail = () => {
                 This event unlocks once you have registered for its prerequisite
                 event.
               </p>
+            )}
+            {btnTxt === "Not Eligible" && (
+              <p className={style.hint}>{batchRegistrationErrorMessage()}</p>
             )}
           </div>
         </div>

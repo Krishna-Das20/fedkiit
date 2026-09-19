@@ -16,7 +16,41 @@ import { Alert, MicroLoading } from "../../microInteraction";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { isPrerequisiteMet } from "../../utils/prerequisite";
+import {
+  batchRegistrationErrorMessage,
+  isBatchRegistrationBlocked,
+  isCurrentBatchEmail,
+  stripMarkdownForPreview,
+} from "../../utils/batchRestriction";
 import { cdn } from "../../utils/cloudinary";
+import { getEventSlug } from "../../utils/slug";
+
+export function EventCardSkeleton({ variant = "default" }) {
+  const featured = variant === "featured";
+
+  return (
+    <div
+      className={`${style.skeleton} ${featured ? style.skeletonFeatured : ""}`}
+      aria-hidden="true"
+    >
+      <div className={style.skeletonMedia}>
+        <span className={style.skeletonBadge} />
+      </div>
+      <div className={style.skeletonMain}>
+        <div className={style.skeletonBody}>
+          <span className={`${style.skeletonLine} ${style.skeletonMeta}`} />
+          <span className={`${style.skeletonLine} ${style.skeletonTitle}`} />
+          <span className={style.skeletonLine} style={{ width: featured ? "82%" : "68%" }} />
+          <span className={style.skeletonLine} style={{ width: featured ? "64%" : "52%" }} />
+        </div>
+        <div className={style.skeletonFooter}>
+          <span className={style.skeletonCta} />
+          <span className={style.skeletonTool} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const EventCard = (props) => {
   const {
@@ -189,6 +223,11 @@ const EventCard = (props) => {
       return;
     }
 
+    if (isBatchRegistrationBlocked(authCtx.user.email)) {
+      setBtnTxt(info.isRegistrationClosed ? "Closed" : "Not Eligible");
+      return;
+    }
+
     setBtnTxt(openState());
   }, [
     authCtx.isLoggedIn,
@@ -212,6 +251,16 @@ const EventCard = (props) => {
       authCtx.user.regForm &&
       authCtx.user.regForm.includes(data.id)
     ) {
+      if (isCurrentBatchEmail(authCtx.user.email)) {
+        setAlert({
+          type: "info",
+          message:
+            "Attendance QR codes are not available for your batch. Please contact fedkiit@gmail.com if you need help.",
+          position: "bottom-right",
+          duration: 4000,
+        });
+        return;
+      }
       setQRModalOpen(!isQRModalOpen);
     } else if (!authCtx.isLoggedIn) {
       setAlert({
@@ -257,15 +306,26 @@ const EventCard = (props) => {
       });
       return false;
     }
+    if (btnTxt === "Not Eligible") {
+      setAlert({
+        type: "info",
+        message: batchRegistrationErrorMessage(),
+        position: "bottom-right",
+        duration: 4000,
+      });
+      return false;
+    }
     return true;
   };
+
+  const eventSlug = getEventSlug(data) || data.id;
 
   const handleForm = () => {
     // "Already Registered" on a team event is the one non-registering action the
     // primary button performs, so it is handled before the validity gate that
     // deliberately rejects that state.
     if (btnTxt === "Already Registered" && info.participationType === "Team") {
-      router.push(`/Events/${data.id}/team`);
+      router.push(`/Events/${eventSlug}/team`);
       return null;
     }
 
@@ -287,7 +347,7 @@ const EventCard = (props) => {
           duration: 3000,
         });
       } else {
-        setNavigatePath("/Events/" + data.id + "/Form");
+        setNavigatePath("/Events/" + eventSlug + "/Form");
         setTimeout(() => {
           setShouldNavigate(true);
         }, 1000);
@@ -314,13 +374,7 @@ const EventCard = (props) => {
   // Every event -- upcoming, past, or viewed from the admin panel -- is served
   // by the single /Events/[eventId] route, so the card builds its own link
   // rather than trusting the caller.
-  //
-  // This used to be `modalpath + data.id`, from when `modalpath` named a modal
-  // and was never navigated to. Turning the title into a real <Link> made those
-  // strings live URLs, and three of the four callers were passing paths that
-  // have no route: "/pastEvents/", "/Events/pastEvents/" and "/profile/Events/".
-  // Every past-event card on the site 404'd as a result.
-  const detailsHref = `/Events/${data.id}`;
+  const detailsHref = `/Events/${eventSlug}`;
   // Built from the origin, not from the current href - appending the id to
   // whatever page you happen to be on produced links like /Events/x/y.
   const shareUrl =
@@ -354,6 +408,7 @@ const EventCard = (props) => {
   const isCtaInert =
     btnTxt === "Closed" ||
     btnTxt === "Already Member" ||
+    btnTxt === "Not Eligible" ||
     (btnTxt === "Already Registered" && info.participationType !== "Team");
 
   const ctaContent = () => {
@@ -376,6 +431,14 @@ const EventCard = (props) => {
         </>
       );
     }
+    if (btnTxt === "Not Eligible") {
+      return (
+        <>
+          <IoIosLock aria-hidden="true" />
+          Not eligible
+        </>
+      );
+    }
     if (isMicroLoading) {
       return <MicroLoading />;
     }
@@ -394,26 +457,7 @@ const EventCard = (props) => {
   };
 
   if (isLoading || showSkeleton) {
-    const featured = variant === "featured";
-    return (
-      <div
-        className={`${style.skeleton} ${featured ? style.skeletonFeatured : ""}`}
-        aria-hidden="true"
-      >
-        <div className={style.skeletonMedia} />
-        <div className={style.skeletonBody}>
-          <span className={style.skeletonLine} style={{ width: "35%" }} />
-          <span className={style.skeletonLine} style={{ width: featured ? "55%" : "80%" }} />
-          <span className={style.skeletonLine} style={{ width: featured ? "70%" : "60%" }} />
-          {featured && (
-            <>
-              <span className={style.skeletonLine} style={{ width: "90%" }} />
-              <span className={style.skeletonCta} />
-            </>
-          )}
-        </div>
-      </div>
-    );
+    return <EventCardSkeleton variant={variant} />;
   }
 
   return (
@@ -571,7 +615,9 @@ const EventCard = (props) => {
         </h3>
 
         {info.eventdescription && (
-          <p className={style.description}>{info.eventdescription}</p>
+          <p className={style.description}>
+            {stripMarkdownForPreview(info.eventdescription)}
+          </p>
         )}
       </div>
 
@@ -607,7 +653,9 @@ const EventCard = (props) => {
               <Share2 size={16} aria-hidden="true" />
             </button>
           )}
-          {!isPast && isRegistered && (
+          {!isPast &&
+            isRegistered &&
+            !isCurrentBatchEmail(authCtx.user?.email) && (
             <button
               type="button"
               className={style.tool}

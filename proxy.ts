@@ -46,8 +46,15 @@ const AUTH_ONLY = new Set([
   "/otp",
 ]);
 
+function bearerFromHeader(header: string | null): string | null {
+  if (!header) return null;
+  return header.startsWith("Bearer ") ? header.slice(7) : header;
+}
+
 async function hasValidSession(request: NextRequest): Promise<boolean> {
-  const token = request.cookies.get("token")?.value;
+  const token =
+    request.cookies.get("token")?.value ??
+    bearerFromHeader(request.headers.get("authorization"));
   if (!token) return false;
 
   const secret = process.env.JWT_SECRET;
@@ -73,6 +80,12 @@ export async function proxy(request: NextRequest) {
   const canonical = CANONICAL.get(pathname.toLowerCase());
   if (canonical && canonical !== pathname) {
     const url = new URL(canonical, request.url);
+    url.search = search;
+    return NextResponse.redirect(url, 308);
+  }
+
+  if (pathname.startsWith("/events/")) {
+    const url = new URL(`/Events/${pathname.slice(8)}`, request.url);
     url.search = search;
     return NextResponse.redirect(url, 308);
   }

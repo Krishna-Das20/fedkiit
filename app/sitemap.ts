@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 
 import { getAllPublicEvents } from "@/lib/services/events";
 import { SITE_URL } from "@/lib/seo/metadata";
+import { getEventSlug } from "@/lib/utils/slug";
 
 /**
  * Dynamic sitemap.
@@ -52,7 +53,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const events = await getAllPublicEvents();
     eventRoutes = events.map((event) => ({
-      url: `${SITE_URL}/events/${event.id}`,
+      url: `${SITE_URL}/Events/${getEventSlug(event.title) || event.id}`,
       lastModified: now,
       changeFrequency: event.isPast ? "yearly" : "weekly",
       priority: event.isPast ? 0.4 : 0.8,

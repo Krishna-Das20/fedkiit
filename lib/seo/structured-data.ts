@@ -1,5 +1,6 @@
 import { FAQS, SITE, SOCIALS } from "@/lib/site";
 import { absoluteUrl, SITE_URL } from "@/lib/seo/metadata";
+import { getEventSlug } from "@/lib/utils/slug";
 
 /**
  * JSON-LD builders.
@@ -97,7 +98,8 @@ export type EventSchemaInput = {
 };
 
 export function eventSchema(event: EventSchemaInput): Json {
-  const url = absoluteUrl(`/events/${event.id}`);
+  const slug = getEventSlug(event.name) || event.id;
+  const url = absoluteUrl(`/Events/${slug}`);
   const isOnline = /online|virtual|zoom|meet/i.test(event.location ?? "");
 
   return {

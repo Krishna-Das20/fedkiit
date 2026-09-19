@@ -9,6 +9,7 @@ import styles from "./styles/Hero.module.scss";
 import { parse, differenceInMilliseconds } from "date-fns";
 import { Alert, MicroLoading } from "../../../../microInteraction";
 import { useRouter } from "next/navigation";
+import { getEventSlug } from "../../../../utils/slug";
 
 function Hero({ ongoingEvents, isRegisteredInRelatedEvents, eventName }) {
   const authCtx = useContext(AuthContext);
@@ -75,10 +76,10 @@ function Hero({ ongoingEvents, isRegisteredInRelatedEvents, eventName }) {
     )?.info;
 
     setInfo(ongoingInfo);
-    const relatedId = ongoingEvents.find(
+    const relatedEvent = ongoingEvents.find(
       (e) => e.info.relatedEvent === "null"
-    )?.id;
-    setRelatedEventId(relatedId);
+    );
+    setRelatedEventId(getEventSlug(relatedEvent) || relatedEvent?.id);
 
     if (ongoingInfo?.regDateAndTime) {
       calculateRemainingTime();

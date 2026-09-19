@@ -19,6 +19,11 @@ import {
 import { RecoveryContext } from "../../../../context/RecoveryContext";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  batchRegistrationErrorMessage,
+  isBatchRegistrationBlocked,
+} from "../../../../utils/batchRestriction";
+import { getEventSlug } from "../../../../utils/slug";
 
 const operators = [
   { label: "match", value: "===" },
@@ -195,7 +200,8 @@ const PreviewForm = ({
               position: "bottom-right",
               duration: 3000,
             });
-            return { path: `/Events/${form.id}/team`, replace: true };
+            const formSlug = getEventSlug(form) || form.id;
+            return { path: `/Events/${formSlug}/team`, replace: true };
           }
 
           return failedJoinDestination(joinResponse?.data?.message);
@@ -213,8 +219,9 @@ const PreviewForm = ({
       const failedJoinDestination = (reason) => {
         const query = new URLSearchParams({ toast: "join_failed" });
         if (reason) query.set("reason", reason);
+        const formSlug = getEventSlug(form) || form.id;
         return {
-          path: `/Events/${form.id}/team?${query.toString()}`,
+          path: `/Events/${formSlug}/team?${query.toString()}`,
           replace: true,
         };
       };
@@ -406,6 +413,16 @@ const PreviewForm = ({
 
   const handleSubmit = async () => {
     if (!currentSection || !areRequiredFieldsFilled()) {
+      return;
+    }
+
+    if (isBatchRegistrationBlocked(authCtx.user?.email)) {
+      Alert({
+        type: "info",
+        message: batchRegistrationErrorMessage(),
+        position: "bottom-right",
+        duration: 4000,
+      });
       return;
     }
 

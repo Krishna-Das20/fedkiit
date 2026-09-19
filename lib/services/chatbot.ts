@@ -9,6 +9,7 @@ import { FAQS, SITE, SOCIALS } from "@/lib/site";
 import { getUpcomingEvents, getPastEvents, getAllPublicEvents, getEventWithSections } from "@/lib/services/events";
 import { getLatestPosts } from "@/lib/services/blogs";
 import { getTeam, getAlumni, humanizeAccess } from "@/lib/services/people";
+import { getEventSlug } from "@/lib/utils/slug";
 
 /**
  * The FED chatbot — Progressive Context Resolution architecture.
@@ -195,7 +196,7 @@ async function fetchSignalContext(signal: keyof typeof SIGNAL_WORDS): Promise<st
         .slice(0, 12)
         .map(
           (e) =>
-            `- ${e.title}${e.dateLabel ? ` on ${e.dateLabel}` : ""} — ${e.type || "event"}. Details: /Events/${e.id}`,
+            `- ${e.title}${e.dateLabel ? ` on ${e.dateLabel}` : ""} — ${e.type || "event"}. Details: /Events/${getEventSlug(e.title) || e.id}`,
         )
         .join("\n");
       return `PAST EVENTS (${pastEvents.length} total)\n${lines}`;
@@ -305,13 +306,14 @@ async function buildContext(intents: DetectedIntents): Promise<string> {
               .filter(Boolean)
               .join(", ");
 
+            const slug = getEventSlug(e.title) || e.id;
             return `- ${e.title}${e.dateLabel ? ` on ${e.dateLabel}` : ""} — ${e.isPaid ? `paid, Rs ${e.amount}` : "free"
               }, ${e.participationType.toLowerCase()} entry (${e.participationType === "Team"
                 ? `team size ${e.minTeamSize}-${e.maxTeamSize}`
                 : "individual"
               }), ${e.isRegistrationOpen ? "registration open" : "registration closed"
               }.${fieldLabels ? ` Required registration form fields: ${fieldLabels}.` : ""
-              } Event ID: ${e.id}. Direct Registration Form URL: /Events/${e.id}/Form`;
+              } Event ID: ${e.id}. Direct Registration Form URL: /Events/${slug}/Form`;
           }),
         );
 
