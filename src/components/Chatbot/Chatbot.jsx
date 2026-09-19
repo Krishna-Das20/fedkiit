@@ -221,10 +221,32 @@ const Chatbot = () => {
         }
 
         // Automatically redirect page if target found and user is not already on that path
-        if (navigationPath && typeof window !== 'undefined' && location?.pathname !== navigationPath) {
-            setTimeout(() => {
-                router.push(navigationPath);
-            }, 500);
+        if (navigationPath && typeof window !== 'undefined') {
+            const [targetPathWithoutHash, hash] = navigationPath.split('#');
+            const targetPath = targetPathWithoutHash || '/';
+            const currentPath = window.location.pathname;
+
+            if (hash && (currentPath === targetPath || (currentPath === '/' && !targetPathWithoutHash))) {
+                // Already on the target page: scroll smoothly directly to the section
+                setTimeout(() => {
+                    const el = document.getElementById(hash);
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }, 300);
+            } else if (currentPath !== navigationPath) {
+                setTimeout(() => {
+                    router.push(navigationPath);
+                    if (hash) {
+                        setTimeout(() => {
+                            const el = document.getElementById(hash);
+                            if (el) {
+                                el.scrollIntoView({ behavior: 'smooth' });
+                            }
+                        }, 700);
+                    }
+                }, 500);
+            }
         }
 
         return { cleanedText, navigationPath };

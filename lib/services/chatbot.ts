@@ -108,7 +108,10 @@ const getTeamNameCache = unstable_cache(
  * 1. Checks keyword patterns (fast regex).
  * 2. Checks if the message contains a known event title or team member name.
  */
-async function detectIntents(message: string): Promise<DetectedIntents> {
+async function detectIntents(
+  message: string,
+  history?: ChatMessage[],
+): Promise<DetectedIntents> {
   const intents: DetectedIntents = {
     needsTeam: false,
     needsEvents: false,
@@ -119,6 +122,27 @@ async function detectIntents(message: string): Promise<DetectedIntents> {
   for (const { key, pattern } of INTENT_PATTERNS) {
     if (pattern.test(message)) {
       intents[key] = true;
+    }
+  }
+
+  // Step 1b: Check for affirmative follow-ups (e.g. "yes", "sure", "explain") when previous turn discussed events
+  if (!intents.needsEvents && history && history.length > 0) {
+    const isAffirmative =
+      /\b(yes|yeah|yep|sure|ok|okay|please|tell\s*me|explain|describe|process)\b/i.test(
+        message,
+      );
+    if (isAffirmative) {
+      const lastModelTurn = [...history]
+        .reverse()
+        .find((h) => h.role === "model");
+      if (
+        lastModelTurn &&
+        /\b(event|events|register|registration|details)\b/i.test(
+          lastModelTurn.text,
+        )
+      ) {
+        intents.needsEvents = true;
+      }
     }
   }
 
@@ -226,12 +250,21 @@ YOUR PRIMARY SCOPE & FOCUS
   - For alumni: append [NAV:/Alumni]
   - For certificates: append [NAV:/profile/certificates]
   - For contact section: append [NAV:/#Contact]
-  - For a specific event details/registration page: append [NAV:/Events/EVENT_ID]
-- Handling Upcoming Event Enquiries:
-  - If live upcoming events exist in context below, describe them and guide user to register [NAV:/Events].
+  - For a specific event details: append [NAV:/Events/EVENT_SLUG] (using the Event Slug from context below, e.g. [NAV:/Events/pixel-ai-hack])
+  - For a specific event registration form: append [NAV:/Events/EVENT_SLUG/Form] (using the Event Slug from context below, e.g. [NAV:/Events/pixel-ai-hack/Form])
+- Handling Event Details & Upcoming Event Enquiries:
+  - When users ask about upcoming events or ask for details about a specific event (e.g. clicking the live event tile or "Upcoming Events"):
+    - State ONLY the core event details: Title, Description, Date, Entry Fee (free or paid amount), and Participation Type (Individual or Team entry with team size).
+    - STRICT RULE: DO NOT enumerate or list the registration form fields here. Keep the answer strictly to the event overview and schedule.
+    - If registration is currently open for the event, always conclude with this polite, professional offer:
+      "Would you like me to explain the registration process and the required form details?"
+    - If asking about upcoming events in general: append [NAV:/Events].
+    - If asking about a specific event: append [NAV:/Events/EVENT_SLUG] (using the Event Slug from context, e.g. [NAV:/Events/pixel-ai-hack]).
   - If NO live upcoming events exist (context states "No upcoming events are published right now"), state clearly and warmly: "There are currently no live upcoming events scheduled at the moment. However, check out highlights from our recent past events!" then summarize recent past events and append [NAV:/Events/pastEvents].
 - Handling Registration & Form Field Enquiries:
-  - When users ask about Registration or registration forms, list the live/upcoming events, specify entry fees & participation rules, enumerate the required registration form fields from context (e.g. Name, Phone, Team Name, Roll No, etc.), and append [NAV:/Events/EVENT_ID/Form] (where EVENT_ID is the exact id of the top live event from context below, e.g. [NAV:/Events/6a6d0ce23c63fe0ec33d333b/Form]). If no event id is available, fallback to [NAV:/Events].
+  - When users ask about Registration, how to register, or respond affirmatively (e.g. "yes", "sure", "tell me", "explain", "describe") to learning about the registration process:
+    - Mention the event, entry fees & rules, and enumerate the required registration form fields from context (e.g. Name, Phone, Team Name, Roll No, etc.) in a clean list (always exclude generic items like "Terms & Conditions" or "Verification").
+    - Append [NAV:/Events/EVENT_SLUG/Form] (where EVENT_SLUG is the slug of the top live event from context below, e.g. [NAV:/Events/pixel-ai-hack/Form]). If no live events are available, fallback to [NAV:/Events].
 - Handling Certificate Enquiries:
   - When users ask about downloading, viewing, or verifying event certificates, explain clearly that verified event participation certificates can be viewed and downloaded under their profile at [Profile Certificates](/profile/certificates) or verified at [Certificate Verification](/verify/certificate). Always append [NAV:/profile/certificates].
 - When users ask general or off-topic questions, answer briefly and enthusiastically guide them to explore FED events or blogs.
@@ -303,7 +336,13 @@ async function buildContext(intents: DetectedIntents): Promise<string> {
             const fieldLabels = withSections?.sections
               .flatMap((s) => s.fields || [])
               .map((f) => f.label || f.name)
-              .filter(Boolean)
+              .filter(
+                (label): label is string =>
+                  Boolean(label) &&
+                  !/terms\s*(&|and)?\s*conditions|t&c|verification/i.test(
+                    label as string,
+                  ),
+              )
               .join(", ");
 
             const slug = getEventSlug(e.title) || e.id;
@@ -312,8 +351,8 @@ async function buildContext(intents: DetectedIntents): Promise<string> {
                 ? `team size ${e.minTeamSize}-${e.maxTeamSize}`
                 : "individual"
               }), ${e.isRegistrationOpen ? "registration open" : "registration closed"
-              }.${fieldLabels ? ` Required registration form fields: ${fieldLabels}.` : ""
-              } Event ID: ${e.id}. Direct Registration Form URL: /Events/${slug}/Form`;
+              }.${fieldLabels ? ` Required registration form fields (ONLY share when user specifically asks about registration): ${fieldLabels}.` : ""
+              } Event Slug: ${slug}. Direct Event URL: /Events/${slug}. Direct Registration Form URL: /Events/${slug}/Form. Event Details Navigation Tag: [NAV:/Events/${slug}]. Event Registration Navigation Tag: [NAV:/Events/${slug}/Form]`;
           }),
         );
 
@@ -367,13 +406,15 @@ async function buildContext(intents: DetectedIntents): Promise<string> {
 // Gemini Integration
 // ---------------------------------------------------------------------------
 
-function isRateLimit(error: unknown): boolean {
+function isRetryable(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
-  return /429|rate.?limit|quota|resource_exhausted/i.test(message);
+  return /429|503|500|rate.?limit|quota|resource_exhausted|high demand|temporar|unavailable|overloaded/i.test(
+    message,
+  );
 }
 
 /**
- * Calls Gemini with the given prompt, rotating keys on rate limits.
+ * Calls Gemini with the given prompt, rotating keys and models on transient errors or high demand.
  */
 async function callGemini(
   systemInstruction: string,
@@ -387,41 +428,52 @@ async function callGemini(
     throw new ApiError(503, "The assistant is not configured right now.");
   }
 
+  // Primary model with fallback if Google's experimental or primary model is overloaded
+  const candidateModels = [env.GEMINI_MODEL];
+  if (!candidateModels.includes("gemini-2.0-flash")) {
+    candidateModels.push("gemini-2.0-flash");
+  }
+  if (!candidateModels.includes("gemini-1.5-flash")) {
+    candidateModels.push("gemini-1.5-flash");
+  }
+
   let lastError: unknown = null;
 
-  for (let attempt = 0; attempt < keys.length; attempt++) {
-    const index = (keyCursor + attempt) % keys.length;
-    const key = keys[index]!;
+  for (const modelName of candidateModels) {
+    for (let attempt = 0; attempt < keys.length; attempt++) {
+      const index = (keyCursor + attempt) % keys.length;
+      const key = keys[index]!;
 
-    try {
-      const client = new GoogleGenerativeAI(key);
-      const model = client.getGenerativeModel({
-        model: env.GEMINI_MODEL,
-        systemInstruction,
-      });
+      try {
+        const client = new GoogleGenerativeAI(key);
+        const model = client.getGenerativeModel({
+          model: modelName,
+          systemInstruction,
+        });
 
-      const chat = model.startChat({
-        history,
-        generationConfig: {
-          temperature: 0.6,
-          maxOutputTokens: 800,
-        },
-      });
+        const chat = model.startChat({
+          history,
+          generationConfig: {
+            temperature: 0.6,
+            maxOutputTokens: 800,
+          },
+        });
 
-      const result = await chat.sendMessage(message);
-      const reply = result.response.text().trim();
+        const result = await chat.sendMessage(message);
+        const reply = result.response.text().trim();
 
-      if (!reply) throw new Error("Empty response from model");
+        if (!reply) throw new Error("Empty response from model");
 
-      keyCursor = index;
-      return reply;
-    } catch (error) {
-      lastError = error;
-      if (isRateLimit(error)) {
-        keyCursor = (index + 1) % keys.length;
-        continue;
+        keyCursor = index;
+        return reply;
+      } catch (error) {
+        lastError = error;
+        if (isRetryable(error)) {
+          keyCursor = (index + 1) % keys.length;
+          continue;
+        }
+        break;
       }
-      break;
     }
   }
 
@@ -439,8 +491,8 @@ export async function generateChatReply(input: {
   message: string;
   history?: ChatMessage[];
 }): Promise<{ reply: string }> {
-  // Tier 2: Detect intents from user message
-  const intents = await detectIntents(input.message);
+  // Tier 2: Detect intents from user message and conversation history
+  const intents = await detectIntents(input.message, input.history);
 
   // Build selective context (Tier 1 always + Tier 2 selective)
   const context = await buildContext(intents);
