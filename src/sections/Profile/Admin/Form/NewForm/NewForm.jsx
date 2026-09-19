@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useContext } from "react";
-import { Button, Input, Text, Section } from "../../../../../components";
+import { Button, Input, Text, Section, MarkdownEditor } from "../../../../../components";
 import { IoSettingsOutline, IoSettingsSharp } from "react-icons/io5";
 import AuthContext from "../../../../../context/AuthContext";
 import { PreviewForm } from "../../../../../features";
@@ -136,13 +136,37 @@ function NewForm() {
 
   useEffect(() => {
     if (authCtx.eventData) {
+      const info = authCtx.eventData?.info ?? {};
+      const storedSections = authCtx.eventData?.sections ?? [];
+
       setdata({
-        ...authCtx.eventData?.info,
-        isPublic: authCtx.eventData?.info.isPublic,
-        isRegistrationClosed: authCtx.eventData?.info.isRegistrationClosed,
-        isEventPast: authCtx.eventData?.info.isEventPast,
+        ...info,
+        isPublic: info.isPublic,
+        isRegistrationClosed: info.isRegistrationClosed,
+        isEventPast: info.isEventPast,
       });
-      setsections(authCtx.eventData?.sections);
+      setsections(storedSections);
+
+      // Restore the payment step as well.
+      //
+      // `constructForPreview` always drops the stored "Payment Details" section
+      // and re-adds `paymentSection` in its place, so that the step reflects the
+      // current QR/Link settings. But `paymentSection` starts out null and
+      // nothing here used to set it, so editing a paid event dropped the stored
+      // step and put nothing back: the Pay Now button, the UTR field and the
+      // screenshot upload all disappeared from the live form on save.
+      //
+      // The stored section's `_id` is carried over so the earlier sections'
+      // `onNext` pointers still resolve to it.
+      if (info.eventType === "Paid") {
+        const stored = storedSections.find(
+          (section) => section?.name === "Payment Details"
+        );
+        setpaymentSection(
+          buildPaymentSection(info.receiverDetails?.mode || "QR", stored?._id)
+        );
+      }
+
       setisEditing(true);
     }
   }, []);
@@ -1457,11 +1481,10 @@ function NewForm() {
               width: "45%",
             }}
           >
-            <Input
+            <MarkdownEditor
               placeholder="Enter Event Description"
               label="Event Description"
-              type="textArea"
-              className={` ${styles.formInputTxtArea}`}
+              className={styles.formInputTxtArea}
               value={data.eventdescription}
               onChange={(e) =>
                 setdata({ ...data, eventdescription: e.target.value })

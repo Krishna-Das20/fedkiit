@@ -5,6 +5,7 @@ import styles from "./styles/Hero.module.scss";
 import CarouselImg from "../../../data/Carousel.json";
 import HeroGallery from "../../../components/HeroGallery/HeroGallery";
 import { AnimatedBox } from "../../../assets/animations/AnimatedBox";
+import { cdn } from "../../../utils/cloudinary";
 
 const titles = [
   "Entrepreneurship.",
@@ -26,32 +27,6 @@ function Hero() {
   const [titleIndex, setTitleIndex] = useState(0);
   const [charIndex, setCharIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  useEffect(() => {
-    const main = mainRef.current;
-    if (!main) return undefined;
-
-    const handleMouseMove = (e) => {
-      const rect = main.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      main.style.setProperty("--grid-mouse-x", `${x}px`);
-      main.style.setProperty("--grid-mouse-y", `${y}px`);
-      main.style.setProperty("--grid-spotlight-opacity", "1");
-    };
-
-    const handleMouseLeave = () => {
-      main.style.setProperty("--grid-spotlight-opacity", "0");
-    };
-
-    main.addEventListener("mousemove", handleMouseMove);
-    main.addEventListener("mouseleave", handleMouseLeave);
-
-    return () => {
-      main.removeEventListener("mousemove", handleMouseMove);
-      main.removeEventListener("mouseleave", handleMouseLeave);
-    };
-  }, []);
 
   useEffect(() => {
     const title = titles[titleIndex];
@@ -82,7 +57,7 @@ function Hero() {
       <div className={styles.hero}>
         <div className={styles.heroTextContainer}>
           <div className={styles.textBackdrop} aria-hidden="true">
-            <img src="/assets/design-3.png" alt="" />
+            <img src={cdn("/assets/design-3.png", 384)} alt="" loading="lazy" decoding="async" />
           </div>
           <AnimatedBox direction="left">
             <div className={styles.textContent}>
