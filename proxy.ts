@@ -73,7 +73,29 @@ async function hasValidSession(request: NextRequest): Promise<boolean> {
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
-  // 1. Normalise casing. The comparison is explicit rather than a redirect rule
+  // 1. Guard API routes against direct address-bar typing
+  if (pathname.startsWith("/api/")) {
+    const secFetchDest = request.headers.get("sec-fetch-dest");
+    const isDirectBrowserNav = secFetchDest === "document";
+    const allowedBrowserNav = [
+      "/api/auth/googleAuth",
+      "/api/form/respondJoinRequest",
+      "/api/form/download/",
+      "/api/form/export-attendance/",
+      "/api/health",
+    ];
+
+    if (
+      isDirectBrowserNav &&
+      !allowedBrowserNav.some((allowed) => pathname.startsWith(allowed))
+    ) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+
+    return NextResponse.next();
+  }
+
+  // 2. Normalise casing. The comparison is explicit rather than a redirect rule
   //    in next.config.ts, because Next matches redirect `source` patterns
   //    case-insensitively — "/Events" -> "/events" would also match "/events"
   //    and loop forever.
@@ -90,7 +112,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
-  // 2. Route protection.
+  // 3. Route protection.
   const isProtected = PROTECTED_PREFIXES.some(
     (prefix) =>
       pathname === prefix || pathname.toLowerCase().startsWith(`${prefix}/`),
@@ -121,6 +143,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api/|_next/static/|_next/image/|favicon.ico|robots.txt|sitemap.xml|opengraph-image).*)",
+    "/((?!_next/static/|_next/image/|favicon.ico|robots.txt|sitemap.xml|opengraph-image).*)",
   ],
 };
