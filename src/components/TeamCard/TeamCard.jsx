@@ -58,11 +58,11 @@ const TeamCard = ({
   };
 
   const handleLink = (url) => {
-    if (url.startsWith("http://") || url.startsWith("https://")) {
-      return url;
-    } else {
-      return "https://" + url;
+    const trimmed = (url || "").trim();
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed;
     }
+    return "https://" + trimmed;
   };
 
   const isExtraDataEmpty = () => {
@@ -74,7 +74,7 @@ const TeamCard = ({
     );
   };
 
-  
+
   //for name overflow
 
   const nameRef = useRef(null);
@@ -94,9 +94,8 @@ const TeamCard = ({
         style={{ display: showSkeleton ? "none" : "block" }}
       >
         <div
-          className={`${styles.teamMemberFront} ${
-            customStyles.teamMemberFront || ""
-          }`}
+          className={`${styles.teamMemberFront} ${customStyles.teamMemberFront || ""
+            }`}
         >
           <div className={styles.ImgDiv}>
             {!isImageLoaded && (
@@ -118,9 +117,8 @@ const TeamCard = ({
             />
           </div>
           <div
-            className={`${styles.teamMemberInfo} ${
-              customStyles.teamMemberInfo || ""
-            }`}
+            className={`${styles.teamMemberInfo} ${customStyles.teamMemberInfo || ""
+              }`}
           >
             <h4
               ref={nameRef}
@@ -132,35 +130,31 @@ const TeamCard = ({
           </div>
         </div>
         <div
-          className={`${styles.teamMemberBack} ${
-            customStyles.teamMemberBack || ""
-          }`}
+          className={`${styles.teamMemberBack} ${customStyles.teamMemberBack || ""
+            }`}
         >
           {!showMore ? (
             <>
               {extraData.designation && (
                 <h5
-                  className={`${
-                    customStyles.teamMemberBackh5 || ""
-                  }`}
+                  className={`${customStyles.teamMemberBackh5 || ""
+                    }`}
                   style={{ color: "#fff" }}
                 >
                   {extraData.designation}
                 </h5>
               )}
               <div
-                className={`${styles.socialLinks} ${
-                  customStyles.socialLinks || ""
-                }`}
+                className={`${styles.socialLinks} ${customStyles.socialLinks || ""
+                  }`}
               >
                 {extraData?.linkedin && (
                   <a
                     href={handleLink(extraData?.linkedin)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`${
-                      customStyles.socialLinksa || ""
-                    }`}
+                    className={`${customStyles.socialLinksa || ""
+                      }`}
                   >
                     <FaLinkedin />
                   </a>
@@ -170,9 +164,8 @@ const TeamCard = ({
                     href={handleLink(extraData?.github)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`${
-                      customStyles.socialLinksa || ""
-                    }`}
+                    className={`${customStyles.socialLinksa || ""
+                      }`}
                   >
                     <FaGithub />
                   </a>
@@ -189,18 +182,16 @@ const TeamCard = ({
               )}
               {isExtraDataEmpty() ? (
                 <div
-                  className={`${styles.knowPara} ${
-                    customStyles.knowPara || ""
-                  }`}
+                  className={`${styles.knowPara} ${customStyles.knowPara || ""
+                    }`}
                 >
                   <p>Nothing to show</p>
                 </div>
               ) : null}
               {onUpdate && authCtx.user.access === "ADMIN" && (
                 <div
-                  className={`${styles.updatebtn} ${
-                    customStyles.updatebtn || ""
-                  }`}
+                  className={`${styles.updatebtn} ${customStyles.updatebtn || ""
+                    }`}
                 >
                   <Button
                     onClick={(e) => {
@@ -235,15 +226,13 @@ const TeamCard = ({
             </>
           ) : (
             <div
-              className={`${styles.knowMoreContent} ${
-                customStyles.knowMoreContent || ""
-              }`}
+              className={`${styles.knowMoreContent} ${customStyles.knowMoreContent || ""
+                }`}
             >
               {extraData.know && (
                 <div
-                  className={`${styles.knowPara} ${
-                    customStyles.knowPara || ""
-                  }`}
+                  className={`${styles.knowPara} ${customStyles.knowPara || ""
+                    }`}
                 >
                   <p>{extraData.know}</p>
                 </div>
