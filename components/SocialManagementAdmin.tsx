@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { SocialPost, Platform } from "@/lib/types/SocialPost";
+import styles from "./SocialManagementAdmin.module.scss";
 
 const API = "/api/social-posts";
 
@@ -95,20 +96,20 @@ export default function SocialManagementAdminPage() {
   }
 
   return (
-    <main className="max-w-5xl mx-auto px-6 py-10 pt-[120px] text-white">
-      <h1 className="text-2xl font-semibold mb-8">Social Posts Management</h1>
+    <main className={styles.wrap}>
+      <h1 className={styles.heading}>
+        <span>Social</span> Posts Management
+      </h1>
 
-      <form
-        onSubmit={handleAdd}
-        className="bg-zinc-900 rounded-xl p-6 mb-8 flex flex-col gap-4 border border-zinc-800"
-      >
-        <h2 className="font-medium">Add new post</h2>
-        {error && <p className="text-red-500 text-sm">{error}</p>}
-        <div className="flex gap-3 flex-wrap">
+      <form onSubmit={handleAdd} className={styles.addCard}>
+        <h2 className={styles.addTitle}>Add new post</h2>
+        {error && <p className={styles.error}>{error}</p>}
+        <div className={styles.fields}>
           <select
             value={platform}
             onChange={(e) => setPlatform(e.target.value as Platform)}
-            className="border border-zinc-700 bg-zinc-800 rounded-lg px-3 py-2 text-sm text-white"
+            className={styles.select}
+            aria-label="Platform"
           >
             <option value="instagram">Instagram</option>
             <option value="linkedin">LinkedIn</option>
@@ -119,71 +120,72 @@ export default function SocialManagementAdminPage() {
             value={postUrl}
             onChange={(e) => setPostUrl(e.target.value)}
             required
-            className="border border-zinc-700 bg-zinc-800 rounded-lg px-3 py-2 text-sm flex-1 min-w-[240px] text-white"
+            className={`${styles.input} ${styles.inputUrl}`}
           />
           <input
             type="text"
             placeholder="Caption (optional)"
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
-            className="border border-zinc-700 bg-zinc-800 rounded-lg px-3 py-2 text-sm flex-1 min-w-[160px] text-white"
+            className={`${styles.input} ${styles.inputCaption}`}
           />
-          <button
-            type="submit"
-            className="bg-white text-black rounded-lg px-5 py-2 text-sm font-medium"
-          >
+          <button type="submit" className={styles.btnPrimary}>
             Add
           </button>
         </div>
       </form>
 
       {loading ? (
-        <p className="text-gray-400 text-sm">Loading…</p>
+        <p className={styles.loading}>Loading…</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full table-fixed text-sm border-collapse text-left">
+        <div className={styles.tableScroll}>
+          <table className={styles.table}>
             <thead>
-              <tr className="text-gray-400">
-                <th className="border border-zinc-800 px-3 py-3 text-left">Platform</th>
-                <th className="border border-zinc-800 px-3 py-3 text-left w-[220px]">URL</th>
-                <th className="border border-zinc-800 px-3 py-3 text-left">Caption</th>
-                <th className="border border-zinc-800 px-3 py-3 text-left w-[90px]">Visible</th>
-                <th className="border border-zinc-800 px-3 py-3 text-left w-[140px]">Actions</th>
+              <tr>
+                <th className={styles.colPlatform}>Platform</th>
+                <th>URL</th>
+                <th>Caption</th>
+                <th className={styles.colVisible}>Visible</th>
+                <th className={styles.colActions}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {posts.map((post) =>
                 editId === post.id ? (
                   <tr key={post.id}>
-                    <td className="border border-zinc-800 px-3 py-3 text-gray-400 capitalize">
+                    <td data-label="Platform" className={styles.platform}>
                       {post.platform}
                     </td>
-                    <td className="border border-zinc-800 px-3 py-3">
+                    <td data-label="URL" className={styles.cellStacked}>
                       <input
                         value={editUrl}
                         onChange={(e) => setEditUrl(e.target.value)}
-                        className="border border-zinc-700 bg-zinc-800 rounded px-2 py-1 text-xs w-full text-white"
+                        className={styles.editInput}
+                        aria-label="Post URL"
                       />
                     </td>
-                    <td className="border border-zinc-800 px-3 py-3">
+                    <td data-label="Caption" className={styles.cellStacked}>
                       <input
                         value={editCaption}
                         onChange={(e) => setEditCaption(e.target.value)}
-                        className="border border-zinc-700 bg-zinc-800 rounded px-2 py-1 text-xs w-full text-white"
+                        className={styles.editInput}
+                        aria-label="Caption"
                       />
                     </td>
-                    <td className="border border-zinc-800 px-3 py-3" />
-                    <td className="border border-zinc-800 px-3 py-3">
-                      <div className="flex gap-2">
+                    <td data-label="Visible" className={styles.muted}>
+                      —
+                    </td>
+                    <td data-label="Actions">
+                      <div className={styles.actions}>
                         <button
                           onClick={() => handleEditSave(post.id, post.platform)}
-                          className="text-xs bg-white text-black rounded px-3 py-1 font-medium"
+                          className={styles.btnSave}
                         >
                           Save
                         </button>
                         <button
                           onClick={() => setEditId(null)}
-                          className="text-xs text-gray-400 underline"
+                          className={styles.btnLink}
                         >
                           Cancel
                         </button>
@@ -191,53 +193,57 @@ export default function SocialManagementAdminPage() {
                     </td>
                   </tr>
                 ) : (
-                  <tr key={post.id} className="hover:bg-zinc-900/50">
-                    <td className="border border-zinc-800 px-3 py-3 capitalize font-medium">
+                  <tr key={post.id}>
+                    <td data-label="Platform" className={styles.platform}>
                       {post.platform}
                     </td>
-                    <td className="border border-zinc-800 px-3 py-3 break-all">
+                    <td data-label="URL" className={styles.cellStacked}>
                       <a
                         href={post.url}
                         target="_blank"
-                        className="text-blue-400 underline break-all"
                         rel="noreferrer"
+                        className={styles.link}
                       >
                         {post.url}
                       </a>
                     </td>
-                    <td className="border border-zinc-800 px-3 py-3 text-gray-400 break-words">
+                    <td data-label="Caption" className={styles.caption}>
                       {post.caption || "—"}
                     </td>
-                    <td className="border border-zinc-800 px-3 py-3">
+                    <td data-label="Visible">
                       <button
                         onClick={() => handleVisibilityToggle(post.id, post.isVisible)}
-                        className={`w-10 h-5 rounded-full transition-colors ${
-                          post.isVisible ? "bg-green-500" : "bg-zinc-600"
+                        className={`${styles.toggle} ${
+                          post.isVisible ? styles.toggleOn : ""
                         }`}
-                        aria-label="Toggle visibility"
+                        role="switch"
+                        aria-checked={post.isVisible}
+                        aria-label={
+                          post.isVisible ? "Hide this post" : "Show this post"
+                        }
                       >
                         <span
-                          className={`block w-4 h-4 rounded-full bg-white shadow mx-0.5 transition-transform ${
-                            post.isVisible ? "translate-x-5" : "translate-x-0"
+                          className={`${styles.knob} ${
+                            post.isVisible ? styles.knobOn : ""
                           }`}
                         />
                       </button>
                     </td>
-                    <td className="border border-zinc-800 px-3 py-3">
-                      <div className="flex gap-3">
+                    <td data-label="Actions">
+                      <div className={styles.actions}>
                         <button
                           onClick={() => {
                             setEditId(post.id);
                             setEditUrl(post.url);
                             setEditCaption(post.caption ?? "");
                           }}
-                          className="text-xs underline text-gray-300"
+                          className={styles.btnLink}
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => handleDelete(post.id)}
-                          className="text-xs underline text-red-500"
+                          className={styles.btnDanger}
                         >
                           Delete
                         </button>
@@ -248,7 +254,7 @@ export default function SocialManagementAdminPage() {
               )}
               {posts.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="border border-zinc-800 px-3 py-6 text-center text-gray-500">
+                  <td colSpan={5} className={styles.empty}>
                     No posts yet.
                   </td>
                 </tr>
