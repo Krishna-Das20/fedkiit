@@ -1,12 +1,19 @@
 // Route entry — renders the component ported from
 // FED-Frontend/src/pages/AttendancePage/AttendancePage.jsx
 //
-// Gated to admins and the door-duty scanner on the server. The sidebar only
-// ever *showed* this link to those users, but that is presentation: `proxy.ts` guards /profile by checking for
-// a valid session, not a role, so before this check any signed-in participant
-// who typed the path got a working scanner. Combined with the fact that a
-// participant can generate their own QR (that is the whole point of
-// QRCodeModal), it meant anyone could mark themselves present.
+// Gated on the server. The sidebar only ever *showed* this link to admins and
+// the door-duty scanner, but that is presentation: `proxy.ts` guards /profile
+// by checking for a valid session, not a role, so before this check any
+// signed-in participant who typed the path got a working scanner. Combined
+// with the fact that a participant can generate their own QR (that is the
+// whole point of QRCodeModal), it meant anyone could mark themselves present.
+//
+// The gate was `isAdmin` at first, which closed that hole but also locked out
+// attendance@fedkiit.com — a plain USER whose only purpose is scanning at the
+// door. `canMarkAttendance` admits the senior-executive roles the Express
+// author intended, any address in FORM_ATTENDANCE_ALLOWED_EMAILS, and that
+// door-duty account, without handing a shared login the event editing that
+// comes with ADMIN.
 //
 // The QR-issuing endpoint stays open to any signed-in user — participants must
 // be able to produce their own code. Only scanning is restricted.
