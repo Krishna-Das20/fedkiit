@@ -23,6 +23,7 @@ import {
   stripMarkdownForPreview,
 } from "../../utils/batchRestriction";
 import { cdn } from "../../utils/cloudinary";
+import { getEventSlug } from "../../utils/slug";
 
 export function EventCardSkeleton({ variant = "default" }) {
   const featured = variant === "featured";
@@ -317,12 +318,14 @@ const EventCard = (props) => {
     return true;
   };
 
+  const eventSlug = getEventSlug(data) || data.id;
+
   const handleForm = () => {
     // "Already Registered" on a team event is the one non-registering action the
     // primary button performs, so it is handled before the validity gate that
     // deliberately rejects that state.
     if (btnTxt === "Already Registered" && info.participationType === "Team") {
-      router.push(`/Events/${data.id}/team`);
+      router.push(`/Events/${eventSlug}/team`);
       return null;
     }
 
@@ -344,7 +347,7 @@ const EventCard = (props) => {
           duration: 3000,
         });
       } else {
-        setNavigatePath("/Events/" + data.id + "/Form");
+        setNavigatePath("/Events/" + eventSlug + "/Form");
         setTimeout(() => {
           setShouldNavigate(true);
         }, 1000);
@@ -371,13 +374,7 @@ const EventCard = (props) => {
   // Every event -- upcoming, past, or viewed from the admin panel -- is served
   // by the single /Events/[eventId] route, so the card builds its own link
   // rather than trusting the caller.
-  //
-  // This used to be `modalpath + data.id`, from when `modalpath` named a modal
-  // and was never navigated to. Turning the title into a real <Link> made those
-  // strings live URLs, and three of the four callers were passing paths that
-  // have no route: "/pastEvents/", "/Events/pastEvents/" and "/profile/Events/".
-  // Every past-event card on the site 404'd as a result.
-  const detailsHref = `/Events/${data.id}`;
+  const detailsHref = `/Events/${eventSlug}`;
   // Built from the origin, not from the current href - appending the id to
   // whatever page you happen to be on produced links like /Events/x/y.
   const shareUrl =

@@ -9,6 +9,7 @@ import styles from "./styles/Hero.module.scss";
 import { parse, differenceInMilliseconds } from "date-fns";
 import { Alert, MicroLoading } from "../../../../microInteraction"; // Ensure this import path is correct
 import { useRouter } from "next/navigation";
+import { getEventSlug } from "../../../../utils/slug";
 
 function Hero({ ongoingEvents, isRegisteredInRelatedEvents, eventName }) {
   const authCtx = useContext(AuthContext);
@@ -63,11 +64,12 @@ function Hero({ ongoingEvents, isRegisteredInRelatedEvents, eventName }) {
           });
         }, 1500);
       } else {
-        const relatedEventId = ongoingEvents.find(
+        const relatedEvent = ongoingEvents.find(
           (e) => e.info.relatedEvent === "null"
-        )?.id;
-        if (relatedEventId) {
-          setNavigatePath(`/Events/6890fd2b2ee5496826b3a5a9/Form`); //hardcoded path for Omega 5.0
+        );
+        if (relatedEvent) {
+          const slug = getEventSlug(relatedEvent) || "omega5.0";
+          setNavigatePath(`/Events/${slug}/Form`);
           setShouldNavigate(true);
         }
         setTimeout(() => {
