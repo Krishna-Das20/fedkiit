@@ -9,6 +9,14 @@ import { ComponentLoading } from "../../../../microInteraction";
 import PropTypes from "prop-types";
 import { Alert } from "../../../../microInteraction";
 
+const formatUrl = (url) => {
+  const trimmed = (url || "").trim();
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
+};
+
 const Profile = ({ editmodal }) => {
   const authCtx = useContext(AuthContext);
   const [isOpen, setIsOpen] = useState(false);
@@ -108,10 +116,21 @@ const Profile = ({ editmodal }) => {
                   {authCtx.user.access !== "USER" &&
                     extraDetails.map((detail, index) =>
                       detail.value ? (
-                        <tr  key={index}>
+                        <tr key={index}>
                           <td className={styles.dets}>{detail.label}</td>
                           <td className={`${styles.vals} ${detail.value ? styles.highlight : ""}`}>
-                          <a href={detail.value} target="_blank" style={{color: "white" , fontWeight: "500"}}>{detail.value}</a>
+                            {detail.label === "Github" || detail.label === "LinkedIn" ? (
+                              <a
+                                href={formatUrl(detail.value)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ color: "white", fontWeight: "500" }}
+                              >
+                                {detail.value}
+                              </a>
+                            ) : (
+                              detail.value
+                            )}
                           </td>
                         </tr>
                       ) : (

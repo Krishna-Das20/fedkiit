@@ -10,6 +10,16 @@ const Home = () => {
   const homeRef = useRef(null);
 
   useEffect(() => {
+    if (window.location.hash) {
+      const id = window.location.hash.slice(1);
+      const el = document.getElementById(id);
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: "smooth" });
+        }, 100);
+        return;
+      }
+    }
     window.scrollTo(0, 0);
   }, []);
 

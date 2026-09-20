@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { body, expressError, handle, json } from "@/lib/api/express";
 import { getCurrentUser, isAdmin, toSafeUser } from "@/lib/auth/access";
@@ -37,13 +38,43 @@ export async function PUT(request: Request) {
       return expressError(403, "You have no profile edits remaining");
     }
 
-    const extra = {
-      ...((target.extra as Record<string, unknown>) ?? {}),
-      ...(data.github !== undefined ? { github: data.github } : {}),
-      ...(data.linkedin !== undefined ? { linkedin: data.linkedin } : {}),
-      ...(data.designation !== undefined
-        ? { designation: data.designation }
-        : {}),
+    // Parse existing target.extra safely whether it is stored as an object or JSON string
+    let currentExtra: Record<string, unknown> = {};
+    if (typeof target.extra === "string") {
+      try {
+        currentExtra = JSON.parse(target.extra);
+      } catch {
+        currentExtra = {};
+      }
+    } else if (typeof target.extra === "object" && target.extra !== null) {
+      currentExtra = { ...(target.extra as Record<string, unknown>) };
+    }
+
+    // Parse incoming extra safely from data.extra (object or string) or top-level fields
+    const rawIncomingExtra = (data as Record<string, unknown>).extra;
+    let incomingExtra: Record<string, unknown> = {};
+    if (typeof rawIncomingExtra === "string") {
+      try {
+        incomingExtra = JSON.parse(rawIncomingExtra);
+      } catch {
+        incomingExtra = {};
+      }
+    } else if (typeof rawIncomingExtra === "object" && rawIncomingExtra !== null) {
+      incomingExtra = rawIncomingExtra as Record<string, unknown>;
+    }
+
+    const github = (data as Record<string, unknown>).github ?? incomingExtra.github;
+    const linkedin = (data as Record<string, unknown>).linkedin ?? incomingExtra.linkedin;
+    const designation = (data as Record<string, unknown>).designation ?? incomingExtra.designation;
+    const know = (data as Record<string, unknown>).know ?? incomingExtra.know;
+
+    const extra: Record<string, unknown> = {
+      ...currentExtra,
+      ...incomingExtra,
+      ...(github !== undefined ? { github } : {}),
+      ...(linkedin !== undefined ? { linkedin } : {}),
+      ...(designation !== undefined ? { designation } : {}),
+      ...(know !== undefined ? { know } : {}),
     };
 
     const updated = await prisma.user.update({
@@ -61,7 +92,7 @@ export async function PUT(request: Request) {
         // normalised, so the stored spelling stays consistent.
         year: normalizeYear(data.year) ?? target.year,
         img: data.img ?? target.img,
-        extra,
+        extra: extra as Prisma.InputJsonValue,
         // Access is never taken from the request body unless an admin sets it.
         ...(isAdmin(current) && data.access
           ? { access: data.access as never }
