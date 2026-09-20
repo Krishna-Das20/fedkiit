@@ -82,7 +82,7 @@ const generatedAndSendCertificate = async ({
     }));
 
     const response = await api.post(
-      "/api/certificate/sendCertificatesAndEvents",
+      "/api/certificate/sendCertificates",
       {
         eventId,
         recipients,

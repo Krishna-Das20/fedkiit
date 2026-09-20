@@ -243,7 +243,20 @@ ${input.isTest ? `<p style="margin:0;font-size:13px;color:#6b7280;">This is a te
  * Recipients already holding a row for the event are skipped rather than
  * duplicated, so a re-run after a partial failure is safe.
  */
-export async function sendCertificatesAndEvents(input: {
+/**
+ * Issue and email certificates to a list of recipients for one event.
+ *
+ * Named for what it does. The neighbouring `/api/certificate/
+ * sendCertificatesAndEvents` route sends nothing despite its name — it is a
+ * read, carried over from the Express backend, and the two must not be
+ * confused.
+ *
+ * Idempotent: a recipient who has already been mailed is skipped unless
+ * `resend` is set, so re-running after a partial failure does not send
+ * duplicates. Per-recipient failures are collected rather than thrown, so one
+ * bad address does not abort the rest of the batch.
+ */
+export async function sendCertificateBatch(input: {
   eventId: string;
   recipients: Array<{ email: string; fieldValues?: Record<string, string> }>;
   resend?: boolean;

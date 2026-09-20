@@ -40,7 +40,7 @@ const Events = () => {
 
         if (response.status === 200) {
           let fetchedEvents = response.data.events;
-          if (authCtx.user.access !== "USER") {
+          if (authCtx?.user?.access !== "USER") {
             // Set events for non-users
             setEvents(sortEventsByDate(fetchedEvents));
           } else {
@@ -67,7 +67,7 @@ const Events = () => {
         // const userEvents = authCtx.user.regForm;
         // // using local JSON data
         // let localEvents = eventsData.events;
-        // if (authCtx.user.access !== "USER") {
+        // if (authCtx?.user?.access !== "USER") {
         //   setEvents(sortEventsByDate(localEvents));
         // } else {
         //   const filteredEvents = localEvents.filter((event) =>
@@ -81,7 +81,7 @@ const Events = () => {
     };
 
     fetchEventsData();
-  }, [authCtx.user.email]);
+  }, [authCtx?.user?.email]);
 
   const sortEventsByDate = (events) => {
     return events.sort((a, b) => new Date(b.info.eventDate) - new Date(a.info.eventDate));
@@ -94,10 +94,10 @@ const Events = () => {
       .replace(/\//g, "-");
   };
 
-  // console.log("Event Access",authCtx.user.access);
+  // console.log("Event Access",authCtx?.user?.access);
   return (
     <div className={styles.participatedEvents}>
-      {authCtx.user.access !== "USER" ? (
+      {authCtx?.user?.access !== "USER" ? (
         <div className={styles.proHeading}>
           <h3 className={styles.headInnerText}>
             <span>Events</span> Timeline
@@ -125,7 +125,7 @@ const Events = () => {
                     <th className={styles.mobilewidth}>Event Name</th>
                     <th className={styles.mobilewidth}>Event Date</th>
                     <th className={styles.mobilewidth}>Certificates</th>
-                    {(analyticsAccessRoles.includes(authCtx.user.access) || authCtx.user.email == "srex@fedkiit.com") && (
+                    {(analyticsAccessRoles.includes(authCtx?.user?.access) || authCtx?.user?.email == "srex@fedkiit.com") && (
                         <>
                       <th className={styles.mobilewidth}>Manage Mail</th>
                       <th className={styles.mobilewidth}>Create/Edit</th>
@@ -159,7 +159,7 @@ const Events = () => {
                           </button>
                         </Link>
                       </td>
-                      {(analyticsAccessRoles.includes(authCtx.user.access) || authCtx.user.email == "srex@fedkiit.com") && (
+                      {(analyticsAccessRoles.includes(authCtx?.user?.access) || authCtx?.user?.email == "srex@fedkiit.com") && (
                         <td>
                           <Link href={`${SendCertificatePath}/${event.id}`}>
                             <button
@@ -175,7 +175,7 @@ const Events = () => {
                           </Link>
                         </td>
                       )}
-                      {(analyticsAccessRoles.includes(authCtx.user.access) || authCtx.user.email == "srex@fedkiit.com") && (
+                      {(analyticsAccessRoles.includes(authCtx?.user?.access) || authCtx?.user?.email == "srex@fedkiit.com") && (
                         <td>
                           <Link href={`${createCertificatesPath}/${event.id}`}>
                             <button
