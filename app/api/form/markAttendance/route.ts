@@ -7,10 +7,11 @@ import { canMarkAttendance } from "@/lib/auth/permissions";
  * POST /api/form/markAttendance
  * Port of controllers/registration/markAttendance.js.
  *
- * Restricted to the roles the Express author listed in the `checkAccess` they
- * left commented out, plus any address in FORM_ATTENDANCE_ALLOWED_EMAILS. This
- * deliberately diverges from the Express route as shipped, which has that check
- * commented out entirely and so accepts unauthenticated calls.
+ * Restricted to ADMIN, the roles the Express author listed in the `checkAccess`
+ * they left commented out, any address in FORM_ATTENDANCE_ALLOWED_EMAILS, and
+ * the dedicated door-duty account. This deliberately diverges from the Express
+ * route as shipped, which has that check commented out entirely and so accepts
+ * unauthenticated calls.
  *
  * The QR token alone is not an access control: a participant can mint their own
  * through /api/form/attendanceCode — that endpoint exists so they can display

@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SafeUser } from "@/lib/auth/access";
+import { isAttendanceScanner } from "@/lib/auth/attendance";
 import { FORM_ANALYTICS_ROLES, FORM_ATTENDANCE_ROLES } from "@/lib/auth/roles";
 import { envList, getEnv } from "@/lib/env";
 
@@ -81,14 +82,23 @@ export function canViewFormAnalytics(
 /**
  * May scan a QR and mark someone present.
  *
- * Grants the scanner page and `markAttendance`, and nothing else — an account
- * listed in `FORM_ATTENDANCE_ALLOWED_EMAILS` still cannot add, edit or delete
- * an event, because those routes ask `isAdmin` and this does not change what
- * role the account holds.
+ * Three ways in, and no more: ADMIN (via `can`), a role in
+ * `FORM_ATTENDANCE_ROLES`, or an address in `FORM_ATTENDANCE_ALLOWED_EMAILS`.
+ * The built-in door-duty account is also allowed, because the sidebar and the
+ * `/profile` redirect decide what to show from `isAttendanceScanner` on the
+ * client, where a server-only env var cannot be read. Accepting it here too
+ * keeps those two from promising a screen the server would refuse.
+ *
+ * Granting this grants the scanner page and the attendance endpoints, and
+ * nothing else — it does not change what role the account holds, so add, edit
+ * and delete still ask `isAdmin` and still say no.
  */
 export function canMarkAttendance(
   user: Pick<SafeUser, "access" | "email"> | null | undefined,
 ): boolean {
+  if (!user) return false;
+  if (isAttendanceScanner(user)) return true;
+
   return canByRoleOrEmail(
     user,
     "FORM_ATTENDANCE_MARK",
