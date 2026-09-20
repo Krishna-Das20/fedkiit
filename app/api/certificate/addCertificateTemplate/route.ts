@@ -2,10 +2,6 @@ import { addCertificateTemplate } from "@/lib/services/certificates";
 import { body, expressError, handle, json } from "@/lib/api/express";
 import { getCurrentUser, isAdmin } from "@/lib/auth/access";
 
-/**
- * POST /api/certificate/addCertificateTemplate
- * Port of controllers/certificate/certificateController.js — admin only.
- */
 export async function POST(request: Request) {
   return handle(async () => {
     const user = await getCurrentUser();
@@ -15,21 +11,18 @@ export async function POST(request: Request) {
     const b = await body<{
       eventId?: string;
       template?: string;
-      fields?: unknown;
+      fields?: unknown[];
     }>(request);
 
-    const fields = Array.isArray(b.fields)
-      ? b.fields
-      : typeof b.fields === "string"
-        ? JSON.parse(b.fields)
-        : [];
+    if (!b.eventId) return expressError(400, "Event ID is required");
+    if (!b.template) return expressError(400, "A template image is required");
 
-    const record = await addCertificateTemplate({
-      eventId: b.eventId ?? "",
-      template: b.template ?? "",
-      fields,
+    const data = await addCertificateTemplate({
+      eventId: b.eventId,
+      template: b.template,
+      fields: (b.fields ?? []) as any,
     });
 
-    return json({ success: true, message: "Template saved", certificate: record });
+    return json({ success: true, data });
   });
 }
