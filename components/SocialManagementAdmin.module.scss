@@ -1,0 +1,362 @@
+// SCSS module for SocialManagementAdmin.
+//
+// This project does NOT load Tailwind — `tailwindcss` sits in package.json but
+// there is no PostCSS config and app/globals.css deliberately dropped the
+// `@import "tailwindcss"` (the note at the top of that file explains why). This
+// component was written against Tailwind utilities, so every one of its classes
+// was inert and the pane rendered as an unstyled table.
+//
+// Colours come from the --fed-* tokens in globals.css where one exists, so the
+// pane tracks the rest of the admin panel instead of hardcoding a second
+// palette. The heading gradient matches ViewMember's.
+
+.wrap {
+  width: 100%;
+  padding: 2em 3em 3em;
+  box-sizing: border-box;
+  color: var(--fed-text);
+}
+
+.heading {
+  font-size: 1.75rem;
+  line-height: 2.25rem;
+  font-weight: 600;
+  margin: 0 0 1.5rem;
+
+  span {
+    background: linear-gradient(to right, #d03e21 40%, #ff8a00);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+/* ─── Add-post card ─────────────────────────────────────────────── */
+
+.addCard {
+  background: var(--fed-surface);
+  border: 1px solid var(--fed-border);
+  border-radius: 0.875rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.addTitle {
+  font-size: 1rem;
+  font-weight: 500;
+  margin: 0 0 1rem;
+  color: var(--fed-text);
+}
+
+.error {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: #f87171;
+}
+
+.fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.input,
+.select {
+  background: var(--fed-surface-2);
+  border: 1px solid var(--fed-border);
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--fed-text);
+  outline: none;
+  transition: border-color 0.15s ease;
+
+  &::placeholder {
+    color: var(--fed-subtle);
+  }
+
+  &:focus {
+    border-color: #ff8a00;
+  }
+}
+
+.select {
+  cursor: pointer;
+
+  // The menu itself is painted by the OS, which ignores the dark surface above
+  // and would otherwise draw white-on-white options on Windows.
+  option {
+    background: var(--fed-surface-2);
+    color: var(--fed-text);
+  }
+}
+
+.inputUrl {
+  flex: 3 1 240px;
+  min-width: 0; // lets the field shrink instead of forcing the row to overflow
+}
+
+.inputCaption {
+  flex: 2 1 180px;
+  min-width: 0;
+}
+
+.btnPrimary {
+  background: linear-gradient(to right, #d03e21 40%, #ff8a00);
+  color: #fff;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.6rem 1.5rem;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+/* ─── Table ─────────────────────────────────────────────────────── */
+
+.tableScroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.table th {
+  color: var(--fed-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.table th,
+.table td {
+  border: 1px solid var(--fed-border);
+  padding: 0.75rem;
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.colPlatform { width: 120px; }
+.colVisible  { width: 90px;  }
+.colActions  { width: 150px; }
+
+.platform {
+  text-transform: capitalize;
+  font-weight: 500;
+}
+
+.link {
+  color: #ff8a00;
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+.caption {
+  color: var(--fed-muted);
+  word-break: break-word;
+}
+
+.muted {
+  color: var(--fed-subtle);
+}
+
+.loading,
+.empty {
+  color: var(--fed-muted);
+  font-size: 0.875rem;
+}
+
+.empty {
+  text-align: center;
+  padding: 2.5rem 0.75rem;
+}
+
+/* ─── Visibility toggle ─────────────────────────────────────────── */
+
+.toggle {
+  width: 2.5rem;
+  height: 1.375rem;
+  border-radius: 999px;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: #3f3f46;
+  transition: background-color 0.18s ease;
+  display: flex;
+  align-items: center;
+
+  &:focus-visible {
+    outline: 2px solid #ff8a00;
+    outline-offset: 2px;
+  }
+}
+
+.toggleOn {
+  background: #22c55e;
+}
+
+.knob {
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  transform: translateX(0.16rem);
+  transition: transform 0.18s ease;
+}
+
+.knobOn {
+  transform: translateX(1.28rem);
+}
+
+/* ─── Row actions ───────────────────────────────────────────────── */
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.btnLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  text-decoration: underline;
+  color: var(--fed-text);
+
+  &:hover { color: #ff8a00; }
+}
+
+.btnDanger {
+  composes: btnLink;
+  color: #f87171;
+
+  &:hover { color: #ef4444; }
+}
+
+.btnSave {
+  composes: btnPrimary;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.8125rem;
+}
+
+.editInput {
+  composes: input;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.8125rem;
+}
+
+/* ─── Responsive ────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .wrap {
+    padding: 1.5rem 1.25rem 2.5rem;
+  }
+}
+
+// Below this the five columns cannot hold a URL without either clipping it or
+// forcing a horizontal scroll across the whole panel, so each row becomes its
+// own card with the header text as an inline label.
+@media (max-width: 680px) {
+  .heading {
+    font-size: 1.4rem;
+  }
+
+  .addCard {
+    padding: 1.1rem;
+  }
+
+  .fields {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  // The row's flex-grow values size the fields horizontally. Once the container
+  // stacks, grow applies to the cross axis instead and the two text inputs
+  // stretch to several hundred pixels tall, so the basis is released here.
+  .inputUrl,
+  .inputCaption {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .btnPrimary {
+    width: 100%;
+  }
+
+  .tableScroll {
+    overflow-x: visible;
+  }
+
+  .table,
+  .table tbody,
+  .table tr,
+  .table td {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .table thead {
+    display: none;
+  }
+
+  .table tr {
+    border: 1px solid var(--fed-border);
+    border-radius: 0.75rem;
+    background: var(--fed-surface);
+    margin-bottom: 1rem;
+    padding: 0.35rem 0.25rem;
+  }
+
+  .table td {
+    border: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.55rem 0.85rem;
+  }
+
+  .table td::before {
+    content: attr(data-label);
+    color: var(--fed-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex: 0 0 auto;
+  }
+
+  // The URL and caption need the full width, so their label sits above them.
+  // Qualified with `.table td` because the base cell rule is already that
+  // specific; as a bare `.cellStacked` the align-items below lost to it and the
+  // label centred itself over the value.
+  .table td.cellStacked {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+  }
+
+  .editInput {
+    width: 100%;
+  }
+}
