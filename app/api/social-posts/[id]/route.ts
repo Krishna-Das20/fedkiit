@@ -21,7 +21,7 @@ async function requireAdmin(): Promise<ReturnType<typeof fail> | null> {
  */
 export async function PUT(
   request: Request,
-  ctx: RouteContext<"/api/social-posts/[id]">,
+  ctx: { params: Promise<{ id: string }> },
 ) {
   return handleRoute(async () => {
     const denied = await requireAdmin();
@@ -79,7 +79,7 @@ export async function PUT(
  */
 export async function DELETE(
   request: Request,
-  ctx: RouteContext<"/api/social-posts/[id]">,
+  ctx: { params: Promise<{ id: string }> },
 ) {
   return handleRoute(async () => {
     const denied = await requireAdmin();

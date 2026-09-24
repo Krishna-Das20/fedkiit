@@ -4,6 +4,7 @@ import { unstable_cache } from "next/cache";
 import type { AccessTypes } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
+import { laterYear, yearFromRollNumber } from "@/lib/academic";
 
 /**
  * Team and alumni directory reads.
@@ -98,6 +99,7 @@ type Row = {
   img: string | null;
   blurhash: string | null;
   year: string | null;
+  rollNumber: string | null;
   extra: unknown;
 };
 
@@ -112,6 +114,10 @@ function toMember(row: Row): TeamMember {
   } else if (typeof row.extra === "object" && row.extra !== null) {
     extra = row.extra as ExtraBlob;
   }
+  // Stored years never advance, so the roll number corrects a stale one; a
+  // stored year *ahead* of the roll number (lateral entry) is kept. See
+  // laterYear in lib/academic.ts.
+  const computedYear = yearFromRollNumber(row.rollNumber);
   return {
     id: row.id,
     name: row.name?.trim() || "FED Member",
@@ -122,7 +128,7 @@ function toMember(row: Row): TeamMember {
     linkedin: extra?.linkedin?.trim() || null,
     github: extra?.github?.trim() || null,
     instagram: extra?.instagram?.trim() || null,
-    year: row.year || null,
+    year: laterYear(computedYear, row.year) ?? row.year ?? null,
   };
 }
 
@@ -134,6 +140,7 @@ const PUBLIC_SELECT = {
   img: true,
   blurhash: true,
   year: true,
+  rollNumber: true,
   extra: true,
 } as const;
 
