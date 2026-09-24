@@ -1,5 +1,6 @@
 import { body, expressError, handle, json } from "@/lib/api/express";
 import { enforceRateLimit, RATE_LIMITS } from "@/lib/api/rate-limit";
+import { getCurrentUser } from "@/lib/auth/access";
 import { generateChatReply, type ChatMessage } from "@/lib/services/chatbot";
 
 /**
@@ -25,6 +26,9 @@ export async function POST(request: Request) {
 
     await enforceRateLimit(RATE_LIMITS.chatbot);
 
+    const user = await getCurrentUser();
+    const isLoggedIn = Boolean(user);
+
     // The client sends either {role, text} or its own {isUser, text} shape.
     const history: ChatMessage[] = (conversationHistory ?? [])
       .filter((turn) => typeof turn?.text === "string" && turn.text.trim())
@@ -41,6 +45,7 @@ export async function POST(request: Request) {
     const { reply } = await generateChatReply({
       message: message.trim(),
       history,
+      isLoggedIn,
     });
 
     return json({ success: true, response: reply });

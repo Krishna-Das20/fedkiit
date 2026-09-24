@@ -32,8 +32,13 @@ const Chatbot = () => {
     const location = { pathname: usePathname() };
     const authCtx = useContext(AuthContext);
 
-    // Get user's first name for personalized greeting
-    const userName = authCtx.isLoggedIn ? authCtx.user?.name?.split(' ')[0] : null;
+    // Get user's first name for personalized greeting (if first word <= 2 letters like 'Md', includes next word)
+    const nameParts = authCtx.isLoggedIn && authCtx.user?.name
+        ? authCtx.user.name.trim().split(/\s+/)
+        : [];
+    const userName = nameParts.length > 1 && nameParts[0].length <= 2
+        ? `${nameParts[0]} ${nameParts[1]}`
+        : (nameParts[0] || null);
 
     // Generate personalized greeting message
     const getGreetingMessage = () => {
@@ -116,7 +121,8 @@ const Chatbot = () => {
         '[NAV:/Alumni]': '/Alumni',
         '[NAV:/#Contact]': '/#Contact',
         '[NAV:/Contact]': '/#Contact',
-        '[NAV:/profile/certificates]': '/profile/certificates',
+        '[NAV:/profile/certificates]': authCtx.isLoggedIn ? '/profile/certificates' : '/Login?next=%2Fprofile%2Fcertificates',
+        '[NAV:/Login?next=%2Fprofile%2Fcertificates]': '/Login?next=%2Fprofile%2Fcertificates',
         '[NAV:/verify/certificate]': '/verify/certificate',
     };
 
@@ -198,24 +204,26 @@ const Chatbot = () => {
             if (target === '/blog' || target === '/blogs') target = '/Blog';
             if (target === '/alumni') target = '/Alumni';
             if (target.toLowerCase() === '/#contact' || target.toLowerCase() === '/contact') target = '/#Contact';
-            if (target.toLowerCase() === '/profile/certificates' || target.toLowerCase() === '/certificates') target = '/profile/certificates';
+            if (target.toLowerCase() === '/profile/certificates' || target.toLowerCase() === '/certificates') {
+                target = authCtx.isLoggedIn ? '/profile/certificates' : '/Login?next=%2Fprofile%2Fcertificates';
+            }
 
             navigationPath = target;
         } else {
             // 2. Auto-detect page route intents from response content if tag absent
-            if (/\b(past events|past event|previous events)\b/i.test(responseText) || responseText.includes('/Events/pastEvents') || responseText.includes('/events/past')) {
+            if (/\b(past events|past event|previous events)\b/i.test(responseText)) {
                 navigationPath = '/Events/pastEvents';
-            } else if (/\b(upcoming events|events list|explore events)\b/i.test(responseText) || responseText.includes('/Events') || responseText.includes('/events')) {
+            } else if (/\b(upcoming events|events list|explore events)\b/i.test(responseText)) {
                 navigationPath = '/Events';
-            } else if (/\b(our team|executive team|members|team members)\b/i.test(responseText) || responseText.includes('/Team') || responseText.includes('/team')) {
+            } else if (/\b(our team|executive team|team members)\b/i.test(responseText)) {
                 navigationPath = '/Team';
-            } else if (/\b(blogs|blog posts|articles|read blogs)\b/i.test(responseText) || responseText.includes('/Blog') || responseText.includes('/blog')) {
+            } else if (/\b(read blogs|our blogs|recent articles)\b/i.test(responseText)) {
                 navigationPath = '/Blog';
-            } else if (/\b(alumni|alumnus)\b/i.test(responseText) || responseText.includes('/Alumni') || responseText.includes('/alumni')) {
+            } else if (/\b(alumni network|our alumni)\b/i.test(responseText)) {
                 navigationPath = '/Alumni';
-            } else if (/\b(certificate|certificates|my certificate|download certificate)\b/i.test(responseText) || responseText.includes('/profile/certificates')) {
-                navigationPath = '/profile/certificates';
-            } else if (/\b(contact us|contact team|reach out|contact form|send message)\b/i.test(responseText) || responseText.includes('/#Contact') || responseText.includes('/#contact')) {
+            } else if (/\b(download certificate|my certificate|view certificate)\b/i.test(responseText)) {
+                navigationPath = authCtx.isLoggedIn ? '/profile/certificates' : '/Login?next=%2Fprofile%2Fcertificates';
+            } else if (/\b(contact us|reach out|contact form|send message)\b/i.test(responseText)) {
                 navigationPath = '/#Contact';
             }
         }
@@ -386,6 +394,9 @@ const Chatbot = () => {
                 setMessages(prev => [...prev, authMessage]);
             } else {
                 let rawResponse = response.success ? response.response : 'Sorry, I encountered an error. Please try again.';
+                if (!rawResponse || !rawResponse.trim()) {
+                    rawResponse = "I'm sorry, I couldn't find details on that. Feel free to ask about FED events, workshops, or our team!";
+                }
 
                 const emailTriggerPattern = /\[EMAIL_TRIGGER\]/gi;
                 if (emailTriggerPattern.test(rawResponse)) {
@@ -395,12 +406,13 @@ const Chatbot = () => {
 
                 let { cleanedText, navigationPath } = processNavigation(rawResponse);
 
-                let finalBotText = cleanedText;
+                let finalBotText = (cleanedText && cleanedText.trim()) ? cleanedText : rawResponse;
+                if (!finalBotText?.trim()) {
+                    finalBotText = "I'm sorry, I couldn't find details on that. Feel free to ask about FED events, workshops, or our team!";
+                }
                 if (navigationPath === '/#Contact') {
                     setIsAwaitingEmailConfirmation(true);
-                    finalBotText = finalBotText
-                        ? `${finalBotText}\n\nWould you like to send email to FED?`
-                        : `Would you like to send email to FED?`;
+                    finalBotText = `${finalBotText}\n\nWould you like to send email to FED?`;
                 }
 
                 const botResponse = {

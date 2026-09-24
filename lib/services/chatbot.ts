@@ -87,10 +87,17 @@ const getTeamNameCache = unstable_cache(
       const team = await getTeam();
       const names: string[] = [];
       for (const m of team) {
-        names.push(m.name.toLowerCase());
-        const firstName = m.name.split(" ")[0];
-        if (firstName && firstName.length > 2) {
-          names.push(firstName.toLowerCase());
+        const fullName = m.name.toLowerCase().trim();
+        names.push(fullName);
+        const parts = fullName.split(/\s+/);
+        if (parts.length > 1 && parts[0].length <= 2) {
+          // If first word is short (<= 2 chars like "md", "dr"), add compound and second word
+          names.push(`${parts[0]} ${parts[1]}`);
+          if (parts[1].length >= 3) {
+            names.push(parts[1]);
+          }
+        } else if (parts[0] && parts[0].length > 2) {
+          names.push(parts[0]);
         }
       }
       return names;
@@ -234,8 +241,12 @@ async function fetchSignalContext(signal: keyof typeof SIGNAL_WORDS): Promise<st
 // Context Assembly
 // ---------------------------------------------------------------------------
 
-function buildSystemPrompt(context: string): string {
+function buildSystemPrompt(context: string, isLoggedIn = false): string {
   const name = getEnv().CHATBOT_NAME;
+
+  const certNavTag = isLoggedIn
+    ? "[NAV:/profile/certificates]"
+    : "[NAV:/Login?next=%2Fprofile%2Fcertificates]";
 
   return `You are ${name}, the event-focused assistant for the ${SITE.name} website.
 FED stands for Federation of Entrepreneurship Development, the student entrepreneurship body of KIIT TBI at KIIT University, Bhubaneswar.
@@ -248,7 +259,7 @@ YOUR PRIMARY SCOPE & FOCUS
   - For team roster: append [NAV:/Team]
   - For blogs: append [NAV:/Blog]
   - For alumni: append [NAV:/Alumni]
-  - For certificates: append [NAV:/profile/certificates]
+  - For certificates: append ${certNavTag}
   - For contact section: append [NAV:/#Contact]
   - For a specific event details: append [NAV:/Events/EVENT_SLUG] (using the Event Slug from context below, e.g. [NAV:/Events/pixel-ai-hack])
   - For a specific event registration form: append [NAV:/Events/EVENT_SLUG/Form] (using the Event Slug from context below, e.g. [NAV:/Events/pixel-ai-hack/Form])
@@ -266,7 +277,10 @@ YOUR PRIMARY SCOPE & FOCUS
     - Mention the event, entry fees & rules, and enumerate the required registration form fields from context (e.g. Name, Phone, Team Name, Roll No, etc.) in a clean list (always exclude generic items like "Terms & Conditions" or "Verification").
     - Append [NAV:/Events/EVENT_SLUG/Form] (where EVENT_SLUG is the slug of the top live event from context below, e.g. [NAV:/Events/pixel-ai-hack/Form]). If no live events are available, fallback to [NAV:/Events].
 - Handling Certificate Enquiries:
-  - When users ask about downloading, viewing, or verifying event certificates, explain clearly that verified event participation certificates can be viewed and downloaded under their profile at [Profile Certificates](/profile/certificates) or verified at [Certificate Verification](/verify/certificate). Always append [NAV:/profile/certificates].
+  - When users ask about downloading, viewing, or verifying event certificates:
+    ${isLoggedIn
+      ? `explain clearly that verified event participation certificates can be viewed and downloaded under their profile at [Profile Certificates](/profile/certificates) or verified at [Certificate Verification](/verify/certificate). Always append [NAV:/profile/certificates].`
+      : `explain clearly that they need to sign in to view and download their event certificates at [Sign In to View Certificates](/Login?next=%2Fprofile%2Fcertificates) or verify directly at [Certificate Verification](/verify/certificate). Always append [NAV:/Login?next=%2Fprofile%2Fcertificates].`}
 - When users ask general or off-topic questions, answer briefly and enthusiastically guide them to explore FED events or blogs.
 - Never invent facts about people, dates or events — if the context below does not contain the answer, say you do not have that information and point the user at the relevant page.
 
@@ -294,7 +308,7 @@ ${context}`;
  * Tier 1 (always): Site info, FAQs, social links, page routes.
  * Tier 2 (selective): Team, events, blogs — only when intent-detected.
  */
-async function buildContext(intents: DetectedIntents): Promise<string> {
+async function buildContext(intents: DetectedIntents, isLoggedIn = false): Promise<string> {
   const promises: Promise<void>[] = [];
   let teamLines = "";
   let eventLines = "";
@@ -396,7 +410,7 @@ async function buildContext(intents: DetectedIntents): Promise<string> {
   sections.push(`SOCIAL LINKS\n${socialLines}`);
   sections.push(`COMMON QUESTIONS\n${faqLines}`);
   sections.push(
-    `SITE PAGES\n- Events: /Events\n- Past events: /Events/pastEvents\n- Team: /Team\n- Alumni: /Alumni\n- Blog: /Blog\n- Certificates: /profile/certificates\n- Verify Certificate: /verify/certificate\n- Contact form: /#Contact`,
+    `SITE PAGES\n- Events: /Events\n- Past events: /Events/pastEvents\n- Team: /Team\n- Alumni: /Alumni\n- Blog: /Blog\n- Certificates: ${isLoggedIn ? "/profile/certificates" : "/Login?next=%2Fprofile%2Fcertificates"}\n- Verify Certificate: /verify/certificate\n- Contact form: /#Contact`,
   );
 
   return sections.join("\n\n");
@@ -428,13 +442,16 @@ async function callGemini(
     throw new ApiError(503, "The assistant is not configured right now.");
   }
 
-  // Primary model with fallback if Google's experimental or primary model is overloaded
+  // Primary model with fallback if Google's primary model is overloaded or rate-limited
   const candidateModels = [env.GEMINI_MODEL];
-  if (!candidateModels.includes("gemini-2.0-flash")) {
-    candidateModels.push("gemini-2.0-flash");
+  if (!candidateModels.includes("gemini-3.5-flash-lite")) {
+    candidateModels.push("gemini-3.5-flash-lite");
   }
-  if (!candidateModels.includes("gemini-1.5-flash")) {
-    candidateModels.push("gemini-1.5-flash");
+  if (!candidateModels.includes("gemini-3.5-flash")) {
+    candidateModels.push("gemini-3.5-flash");
+  }
+  if (!candidateModels.includes("gemini-2.5-flash")) {
+    candidateModels.push("gemini-2.5-flash");
   }
 
   let lastError: unknown = null;
@@ -490,13 +507,16 @@ async function callGemini(
 export async function generateChatReply(input: {
   message: string;
   history?: ChatMessage[];
+  isLoggedIn?: boolean;
 }): Promise<{ reply: string }> {
+  const isLoggedIn = Boolean(input.isLoggedIn);
+
   // Tier 2: Detect intents from user message and conversation history
   const intents = await detectIntents(input.message, input.history);
 
   // Build selective context (Tier 1 always + Tier 2 selective)
-  const context = await buildContext(intents);
-  const systemInstruction = buildSystemPrompt(context);
+  const context = await buildContext(intents, isLoggedIn);
+  const systemInstruction = buildSystemPrompt(context, isLoggedIn);
 
   let history = (input.history ?? [])
     .slice(-MAX_HISTORY)
@@ -522,7 +542,7 @@ export async function generateChatReply(input: {
     const extraContext = await fetchSignalContext(signal);
     if (extraContext) {
       const enrichedContext = `${context}\n\n${extraContext}`;
-      const enrichedPrompt = buildSystemPrompt(enrichedContext);
+      const enrichedPrompt = buildSystemPrompt(enrichedContext, isLoggedIn);
 
       reply = await callGemini(enrichedPrompt, history, input.message);
 
@@ -530,6 +550,11 @@ export async function generateChatReply(input: {
         reply = reply.replace(tag, "").trim();
       }
     }
+  }
+
+  // Fallback if reply is empty after stripping signals or model produced empty output
+  if (!reply.trim()) {
+    reply = "I couldn't find specific records for that in our directory or events database. If you're looking for our team, events, or blogs, feel free to explore the site!";
   }
 
   return { reply };
