@@ -279,8 +279,9 @@ YOUR PRIMARY SCOPE & FOCUS
 - Handling Certificate Enquiries:
   - When users ask about downloading, viewing, or verifying event certificates:
     ${isLoggedIn
-      ? `explain clearly that verified event participation certificates can be viewed and downloaded under their profile at [Profile Certificates](/profile/certificates) or verified at [Certificate Verification](/verify/certificate). Always append [NAV:/profile/certificates].`
-      : `explain clearly that they need to sign in to view and download their event certificates at [Sign In to View Certificates](/Login?next=%2Fprofile%2Fcertificates) or verify directly at [Certificate Verification](/verify/certificate). Always append [NAV:/Login?next=%2Fprofile%2Fcertificates].`}
+      ? `explain clearly that verified event participation certificates can be viewed and downloaded under their profile at [Profile Certificates](/profile/certificates). Always append [NAV:/profile/certificates].`
+      : `explain clearly that they need to sign in to view and download their event certificates at [Sign In to View Certificates](/Login?next=%2Fprofile%2Fcertificates). Always append [NAV:/Login?next=%2Fprofile%2Fcertificates].`}
+    - STRICT RULE: DO NOT give, mention, or link to the URL /verify/certificate or any standalone verification link (as direct certificate verification requires a specific certificate ID). Always guide users exclusively to check their certificates under their profile.
 - When users ask general or off-topic questions, answer briefly and enthusiastically guide them to explore FED events or blogs.
 - Never invent facts about people, dates or events — if the context below does not contain the answer, say you do not have that information and point the user at the relevant page.
 
@@ -410,7 +411,7 @@ async function buildContext(intents: DetectedIntents, isLoggedIn = false): Promi
   sections.push(`SOCIAL LINKS\n${socialLines}`);
   sections.push(`COMMON QUESTIONS\n${faqLines}`);
   sections.push(
-    `SITE PAGES\n- Events: /Events\n- Past events: /Events/pastEvents\n- Team: /Team\n- Alumni: /Alumni\n- Blog: /Blog\n- Certificates: ${isLoggedIn ? "/profile/certificates" : "/Login?next=%2Fprofile%2Fcertificates"}\n- Verify Certificate: /verify/certificate\n- Contact form: /#Contact`,
+    `SITE PAGES\n- Events: /Events\n- Past events: /Events/pastEvents\n- Team: /Team\n- Alumni: /Alumni\n- Blog: /Blog\n- Certificates: ${isLoggedIn ? "/profile/certificates" : "/Login?next=%2Fprofile%2Fcertificates"}\n- Contact form: /#Contact`,
   );
 
   return sections.join("\n\n");
