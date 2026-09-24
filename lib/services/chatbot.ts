@@ -442,17 +442,8 @@ async function callGemini(
     throw new ApiError(503, "The assistant is not configured right now.");
   }
 
-  // Primary model with fallback if Google's primary model is overloaded or rate-limited
-  const candidateModels = [env.GEMINI_MODEL];
-  if (!candidateModels.includes("gemini-2.5-flash")) {
-    candidateModels.push("gemini-2.5-flash");
-  }
-  if (!candidateModels.includes("gemini-3.5-flash")) {
-    candidateModels.push("gemini-3.5-flash");
-  }
-  if (!candidateModels.includes("gemini-3.5-flash-lite")) {
-    candidateModels.push("gemini-3.5-flash-lite");
-  }
+  // Models configured dynamically via env (GEMINI_MODEL followed by GEMINI_FALLBACK_MODELS)
+  const candidateModels = env.GEMINI_MODELS.length > 0 ? env.GEMINI_MODELS : [env.GEMINI_MODEL];
 
   let lastError: unknown = null;
 

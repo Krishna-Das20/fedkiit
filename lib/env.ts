@@ -33,6 +33,7 @@ const schema = z.object({
   RAZORPAY_KEY_SECRET: z.string().optional(),
 
   GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
+  GEMINI_FALLBACK_MODELS: z.string().default("gemini-3.5-flash,gemini-3.5-flash-lite"),
   CHATBOT_NAME: z.string().default("FEDI"),
 
   CERT_ORG: z.string().optional(),
@@ -90,7 +91,10 @@ const schema = z.object({
     .transform((v) => v === "true"),
 });
 
-type Env = z.infer<typeof schema> & { GEMINI_API_KEYS: string[] };
+type Env = z.infer<typeof schema> & {
+  GEMINI_API_KEYS: string[];
+  GEMINI_MODELS: string[];
+};
 
 let cached: Env | null = null;
 
@@ -113,7 +117,16 @@ export function getEnv(): Env {
     if (key) geminiKeys.push(key);
   }
 
-  cached = { ...parsed.data, GEMINI_API_KEYS: geminiKeys };
+  const geminiModels = [
+    parsed.data.GEMINI_MODEL,
+    ...envList(parsed.data.GEMINI_FALLBACK_MODELS),
+  ].filter((model, idx, arr) => model && arr.indexOf(model) === idx);
+
+  cached = {
+    ...parsed.data,
+    GEMINI_API_KEYS: geminiKeys,
+    GEMINI_MODELS: geminiModels,
+  };
   return cached;
 }
 
