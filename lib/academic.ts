@@ -14,6 +14,13 @@ import { getEnv } from "@/lib/env";
  * Derivation survives only as a *fallback*, for the one path with no form to
  * fill in — Google sign-up, where the profile is built from the token alone.
  *
+ * One exception, for display: a stored year never advances on its own, so by
+ * each July every roster entry is a year out of date. Where the roster shows a
+ * year it takes the *later* of the stored and derived years (`laterYear`).
+ * Nothing is written back — the stored value is left exactly as the user set
+ * it, and a year the user sets ahead of their roll number, which is what a
+ * lateral-entry student does, still wins.
+ *
  * `normalizeYear` is the part worth keeping regardless. Six spellings of the
  * same thing were in the database ("3rd", "3rd Year", "3rd year", …) because
  * each screen shipped its own option list, and that split one cohort across
@@ -60,7 +67,8 @@ export function currentAcademicYear(now: Date = new Date()): number {
  * rather than storing a wrong guess.
  *
  * A **fallback only** — see the note at the top. It cannot know about lateral
- * entry, so it must never override a year the user selected.
+ * entry, so it must never replace a *later* year the user selected. Callers
+ * that combine the two go through `laterYear`.
  */
 export function yearFromRollNumber(
   rollNumber: string | null | undefined,
@@ -90,4 +98,32 @@ export function schoolFromRollNumber(
   return String(rollNumber).substring(2, 4) === "05"
     ? "Computer Science and Engineering"
     : null;
+}
+
+/** Position in the sequence 1st … 5th, Passout; 0 for anything unrecognised. */
+function yearRank(value: string | null | undefined): number {
+  const year = normalizeYear(value);
+  if (!year) return 0;
+  return year === PASSOUT ? LABELS.length + 1 : LABELS.indexOf(year as (typeof LABELS)[number]) + 1;
+}
+
+/**
+ * The later of two years of study, normalised; `null` if neither is a
+ * recognisable year.
+ *
+ * For combining a stored year with `yearFromRollNumber`. A stored year only
+ * ever falls *behind* — it is set once and never advances — so the derived year
+ * corrects it. A lateral-entry student is *ahead* of the year their roll number
+ * implies, so once they set it, the stored year wins and stays correct. Taking
+ * the derived year outright would pin them a year behind with no way out; taking
+ * the stored year outright leaves everyone a year behind after each July.
+ */
+export function laterYear(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): string | null {
+  const rankA = yearRank(a);
+  const rankB = yearRank(b);
+  if (rankA === 0 && rankB === 0) return null;
+  return rankA >= rankB ? normalizeYear(a) : normalizeYear(b);
 }

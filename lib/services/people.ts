@@ -4,7 +4,7 @@ import { unstable_cache } from "next/cache";
 import type { AccessTypes } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
-import { yearFromRollNumber } from "@/lib/academic";
+import { laterYear, yearFromRollNumber } from "@/lib/academic";
 
 /**
  * Team and alumni directory reads.
@@ -114,9 +114,9 @@ function toMember(row: Row): TeamMember {
   } else if (typeof row.extra === "object" && row.extra !== null) {
     extra = row.extra as ExtraBlob;
   }
-  // Compute year dynamically from roll number (e.g. "24052xxx" → 2026-2024+1 = 3rd).
-  // Falls back to the stored year field for lateral-entry students whose roll
-  // number prefix does not correspond to their actual year of study.
+  // Stored years never advance, so the roll number corrects a stale one; a
+  // stored year *ahead* of the roll number (lateral entry) is kept. See
+  // laterYear in lib/academic.ts.
   const computedYear = yearFromRollNumber(row.rollNumber);
   return {
     id: row.id,
@@ -128,7 +128,7 @@ function toMember(row: Row): TeamMember {
     linkedin: extra?.linkedin?.trim() || null,
     github: extra?.github?.trim() || null,
     instagram: extra?.instagram?.trim() || null,
-    year: computedYear ?? row.year ?? null,
+    year: laterYear(computedYear, row.year) ?? row.year ?? null,
   };
 }
 
