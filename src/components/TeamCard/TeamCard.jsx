@@ -4,6 +4,7 @@ import React, { useContext, useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 import { FaLinkedin, FaGithub } from "react-icons/fa";
 import { Blurhash } from "react-blurhash";
+import { cdn } from "../../utils/cloudinary";
 import styles from "./styles/TeamCard.module.scss";
 import TeamCardSkeleton from "../../layouts/Skeleton/TeamCard/TeamCard";
 import { Button } from "../Core";
@@ -20,6 +21,8 @@ const TeamCard = ({
   const [contentLoaded, setContentLoaded] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(true);
+  const imgRef = useRef(null);
+
   const rawExtra = member?.extra;
   let parsedExtra = {};
   if (typeof rawExtra === "string") {
@@ -47,6 +50,12 @@ const TeamCard = ({
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
+      setIsImageLoaded(true);
+    }
+  }, [member?.img]);
+
   const authCtx = useContext(AuthContext);
 
   const isDirectorRole =
@@ -55,6 +64,10 @@ const TeamCard = ({
 
   const handleImageLoad = () => {
     setIsImageLoaded(true);
+  };
+
+  const handleImageError = () => {
+    setIsImageLoaded(false);
   };
 
   const handleLink = (url) => {
@@ -97,7 +110,7 @@ const TeamCard = ({
           className={`${styles.teamMemberFront} ${customStyles.teamMemberFront || ""
             }`}
         >
-          <div className={styles.ImgDiv}>
+          <div className={`${styles.ImgDiv} ${customStyles.ImgDiv || ""}`}>
             {!isImageLoaded && (
               <Blurhash
                 hash="LEG8_%els7NgM{M{RiNI*0IVog%L"
@@ -109,10 +122,14 @@ const TeamCard = ({
               />
             )}
             <img
-              src={member?.img}
+              ref={imgRef}
+              src={cdn(member?.img, 600)}
               alt={`Profile of ${member?.name}`}
-              className={styles.teamMemberImg}
+              className={`${styles.teamMemberImg} ${
+                customStyles.teamMemberImg || ""
+              }`}
               onLoad={handleImageLoad}
+              onError={handleImageError}
               style={{ display: isImageLoaded ? "block" : "none" }}
             />
           </div>

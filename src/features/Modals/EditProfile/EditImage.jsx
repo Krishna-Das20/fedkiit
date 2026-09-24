@@ -100,9 +100,9 @@ const EditImage = (props) => {
                 authCtx.user.college,
                 authCtx.user.contactNo,
                 authCtx.user.year,
-                authCtx.user.extra.github,
-                authCtx.user.extra.linkedin,
-                authCtx.user.extra.designation,
+                authCtx.user?.extra?.github || "",
+                authCtx.user?.extra?.linkedin || "",
+                authCtx.user?.extra?.designation || "",
                 authCtx.user.access,
                 authCtx.user.editProfileCount,
                 authCtx.user.regForm
