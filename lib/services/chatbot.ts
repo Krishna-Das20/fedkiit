@@ -444,14 +444,14 @@ async function callGemini(
 
   // Primary model with fallback if Google's primary model is overloaded or rate-limited
   const candidateModels = [env.GEMINI_MODEL];
-  if (!candidateModels.includes("gemini-3.5-flash-lite")) {
-    candidateModels.push("gemini-3.5-flash-lite");
+  if (!candidateModels.includes("gemini-2.5-flash")) {
+    candidateModels.push("gemini-2.5-flash");
   }
   if (!candidateModels.includes("gemini-3.5-flash")) {
     candidateModels.push("gemini-3.5-flash");
   }
-  if (!candidateModels.includes("gemini-2.5-flash")) {
-    candidateModels.push("gemini-2.5-flash");
+  if (!candidateModels.includes("gemini-3.5-flash-lite")) {
+    candidateModels.push("gemini-3.5-flash-lite");
   }
 
   let lastError: unknown = null;

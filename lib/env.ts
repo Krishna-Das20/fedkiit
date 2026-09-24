@@ -32,7 +32,7 @@ const schema = z.object({
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
 
-  GEMINI_MODEL: z.string().default("gemini-3.5-flash-lite"),
+  GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
   CHATBOT_NAME: z.string().default("FEDI"),
 
   CERT_ORG: z.string().optional(),
