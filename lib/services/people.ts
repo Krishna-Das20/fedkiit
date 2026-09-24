@@ -4,6 +4,7 @@ import { unstable_cache } from "next/cache";
 import type { AccessTypes } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
+import { yearFromRollNumber } from "@/lib/academic";
 
 /**
  * Team and alumni directory reads.
@@ -98,6 +99,7 @@ type Row = {
   img: string | null;
   blurhash: string | null;
   year: string | null;
+  rollNumber: string | null;
   extra: unknown;
 };
 
@@ -112,6 +114,10 @@ function toMember(row: Row): TeamMember {
   } else if (typeof row.extra === "object" && row.extra !== null) {
     extra = row.extra as ExtraBlob;
   }
+  // Compute year dynamically from roll number (e.g. "24052xxx" → 2026-2024+1 = 3rd).
+  // Falls back to the stored year field for lateral-entry students whose roll
+  // number prefix does not correspond to their actual year of study.
+  const computedYear = yearFromRollNumber(row.rollNumber);
   return {
     id: row.id,
     name: row.name?.trim() || "FED Member",
@@ -122,7 +128,7 @@ function toMember(row: Row): TeamMember {
     linkedin: extra?.linkedin?.trim() || null,
     github: extra?.github?.trim() || null,
     instagram: extra?.instagram?.trim() || null,
-    year: row.year || null,
+    year: computedYear ?? row.year ?? null,
   };
 }
 
@@ -134,6 +140,7 @@ const PUBLIC_SELECT = {
   img: true,
   blurhash: true,
   year: true,
+  rollNumber: true,
   extra: true,
 } as const;
 

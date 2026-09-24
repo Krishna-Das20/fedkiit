@@ -17,7 +17,7 @@ async function requireAdmin(): Promise<ReturnType<typeof fail> | null> {
  */
 export async function PATCH(
   request: Request,
-  ctx: RouteContext<"/api/social-posts/[id]/visibility">,
+  ctx: { params: Promise<{ id: string }> },
 ) {
   return handleRoute(async () => {
     const denied = await requireAdmin();
