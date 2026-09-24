@@ -13,7 +13,7 @@ import {
 } from "../../../../../microInteraction";
 // import {api} from "../../../../../services"
 
-function AddMemberForm() {
+function AddMemberForm({ onSuccess }) {
   const authCtx = useContext(AuthContext);
   const [data, setData] = useState({
     name: "",
@@ -47,15 +47,17 @@ function AddMemberForm() {
         designation: authCtx.memberData?.extra?.designation || "",
         know: authCtx.memberData?.extra?.know || "",
       });
+      if (authCtx.memberData.img) {
+        setImagePrv(authCtx.memberData.img);
+      }
     }
   }, [authCtx.memberData]);
 
   useEffect(() => {
     if (authCtx.croppedImageFile) {
-      // setSelectedFile(authCtx.croppedImageFile);
       const file = authCtx.croppedImageFile;
       setCroppedFile(authCtx.croppedImageFile);
-      setData({ ...data, img: file.name });
+      setData((prev) => ({ ...prev, img: file.name }));
     }
   }, [authCtx.croppedImageFile]);
 
@@ -70,85 +72,80 @@ function AddMemberForm() {
       setAccessTypes(Array.isArray(fetchedAccessTypes) ? fetchedAccessTypes : []);
     } catch (error) {
       console.error("Error fetching access types:", error);
-      // No static fallback. The bundled Access.json had drifted badly from the
-      // schema — 15 entries against the enum's 30, missing every SENIOR_EXECUTIVE
-      // and DEPUTY_DIRECTOR role while offering three (DIRECTOR_SPONSORSHIP,
-      // OPERATION, SPONSORSHIP) that no longer exist. Assigning one of those
-      // would have been rejected by the backend anyway.
       setAccessTypes([]);
     }
   };
 
   const isFormFilled = () => {
-    const { name, email, access } = data;
-    return email.trim() !== "" && access.trim() !== "";
+    const { email, access } = data;
+    return Boolean(email && email.trim() !== "" && access && access.trim() !== "");
   };
 
   const filterData = (data) => {
     const filteredData = {};
     const extra = {};
-  
-    // Extract and add fields to `extra` if they are present and not empty
-    if (data.designation.trim() !== "") {
-      extra.designation = data.designation;
+
+    if (data.designation && typeof data.designation === "string" && data.designation.trim() !== "") {
+      extra.designation = data.designation.trim();
     }
-    if (data.github.trim() !== "") {
-      extra.github = data.github;
+    if (data.github && typeof data.github === "string" && data.github.trim() !== "") {
+      extra.github = data.github.trim();
     }
-    if (data.linkedin.trim() !== "") {
-      extra.linkedin = data.linkedin;
+    if (data.linkedin && typeof data.linkedin === "string" && data.linkedin.trim() !== "") {
+      extra.linkedin = data.linkedin.trim();
     }
-    if (data.know.trim() !== "") {
-      extra.know = data.know;
+    if (data.know && typeof data.know === "string" && data.know.trim() !== "") {
+      extra.know = data.know.trim();
     }
-  
-    // Add `extra` to `filteredData` if it's not empty
+
     if (Object.keys(extra).length > 0) {
-      filteredData.extra = JSON.stringify(extra); // Convert to JSON string
+      filteredData.extra = JSON.stringify(extra);
     }
-  
-    // Add other fields to `filteredData` if they are present and not empty
+
     Object.keys(data).forEach((key) => {
       if (
         key !== "designation" &&
         key !== "github" &&
         key !== "linkedin" &&
         key !== "know" &&
+        typeof data[key] === "string" &&
         data[key].trim() !== ""
       ) {
-        filteredData[key] = data[key];
+        filteredData[key] = data[key].trim();
       }
     });
-  
+
     return filteredData;
   };
-  
 
   const onAddOrUpdateMember = async () => {
     setIsMicroLoading(true);
     if (isFormFilled()) {
+      const isUpdating = Boolean(authCtx.memberData);
       try {
         const filteredData = filterData(data);
         const formData = new FormData();
-  
+
         for (const key in filteredData) {
           if (key !== "img") {
             formData.append(key, filteredData[key]);
           }
         }
-  
+
         if (croppedImageFile) {
           formData.append("image", croppedImageFile);
         }
-  
+
+        const headers = {};
+        const token = window.localStorage.getItem("token");
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
 
         const response = await api.post("/api/user/addMember", formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            "Authorization": `Bearer ${window.localStorage.getItem("token")}`,
-          },
+          headers,
         });
-        // console.log("Member added successfully:", response.data.user);
+
         setData({
           name: "",
           email: "",
@@ -159,23 +156,46 @@ function AddMemberForm() {
           designation: "",
           know: "",
         });
-        alert("Member Added Successfully");
+        setImagePrv(null);
+        setCroppedFile(null);
+        setSelectedFile(null);
+        setFileName(null);
+        if (authCtx.memberData) {
+          authCtx.memberData = null;
+        }
+        if (authCtx.croppedImageFile) {
+          authCtx.croppedImageFile = null;
+        }
+
+        const message =
+          response.data?.message ||
+          (isUpdating ? "Member Updated Successfully" : "Member Added Successfully");
+        alert(message);
+        if (onSuccess) {
+          onSuccess();
+        }
       } catch (error) {
-        console.error("Error adding member:", error);
-        alert("Failed to add member. Please try again.");
+        console.error("Error adding/updating member:", error);
+        const errorMsg =
+          error?.response?.data?.message ||
+          "Failed to add member. Please try again.";
+        alert(errorMsg);
       } finally {
         setIsMicroLoading(false);
       }
     } else {
-      alert("Please fill all the fields");
+      alert("Please fill all the required fields (Email and Access)");
     }
   };
-  
 
   const isSafeImagePreviewUrl = (url) => {
     return (
       typeof url === "string" &&
-      (url.startsWith("blob:") || url.startsWith("data:image/"))
+      (url.startsWith("blob:") ||
+        url.startsWith("data:image/") ||
+        url.startsWith("http://") ||
+        url.startsWith("https://") ||
+        url.startsWith("/"))
     );
   };
 
