@@ -1,5 +1,6 @@
 "use client";
 
+import { format, parse } from "date-fns";
 import { Input } from "../../../../components";
 import type { InputChange } from "../../../../components/Core/Input";
 import type {
@@ -47,20 +48,42 @@ const getFieldPlaceholder = (field: LiveField) => {
   return `Enter ${field.name || "detail"}`;
 };
 
-/** What an Input shows for a field: the uploaded file's name, else the answer. */
-const displayValue = (field: FormFieldDef) =>
-  field.type === "file" || field.type === "image"
-    ? (field.onChangeValue as File | undefined)?.name
-    : (field.onChangeValue as string | undefined);
+/** How a date answer is stored: plain text, in the participant's own day. */
+const DATE_ANSWER = "yyyy-MM-dd";
 
 /**
- * The answer an Input change carries. A select hands over the chosen option;
- * every other type passes an event-like object whose target holds the value.
+ * What an Input shows for a field: the uploaded file's name, the picked date
+ * (read back in local time, so it never shifts a day), else the answer.
  */
-const answerFrom = (field: FormFieldDef, change: InputChange<string>) =>
-  field.type === "select"
-    ? (change as string)
-    : (change as { target: { value: FieldAnswer } }).target.value;
+const displayValue = (field: FormFieldDef) => {
+  if (field.type === "file" || field.type === "image") {
+    return (field.onChangeValue as File | undefined)?.name;
+  }
+  if (field.type === "date") {
+    const answer = field.onChangeValue as string | undefined;
+    return answer ? parse(answer, DATE_ANSWER, new Date()) : null;
+  }
+  return field.onChangeValue as string | undefined;
+};
+
+/**
+ * The answer an Input change carries. A select hands over the chosen option
+ * and the date picker a Date (null once cleared); every other type passes an
+ * event-like object whose target holds the value.
+ *
+ * Dates used to go through the `target.value` branch too, which threw on the
+ * Date and replaced the whole page with an error the moment a participant
+ * typed a date. They are now stored as YYYY-MM-DD text, which also passes the
+ * length rule the form builder puts on every field.
+ */
+const answerFrom = (field: FormFieldDef, change: InputChange<string>): FieldAnswer => {
+  if (field.type === "select") return change as string;
+  if (field.type === "date") {
+    const picked = change as Date | null;
+    return picked ? format(picked, DATE_ANSWER) : "";
+  }
+  return (change as { target: { value: FieldAnswer } }).target.value;
+};
 
 type SectionModalProps = {
   section: FormSection;

@@ -171,8 +171,8 @@ const EventCard = (props: EventCardProps) => {
 
   const calculateRemainingTime = () => {
     // Parse the regDateAndTime received from backend
-    // Called on mount even without a date; parse then yields Invalid Date,
-    // which reads as "not counting down".
+    // Also runs on mount when the event has no regDateAndTime, and parse
+    // throws on undefined. Every event the admin form saves has one.
     const regStartDate = parse(
       info.regDateAndTime as string,
       "MMMM do yyyy, h:mm:ss a",
