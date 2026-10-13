@@ -8,6 +8,9 @@ import React, {
   useRef,
 } from "react";
 
+import type { FormRecord } from "../types/form";
+import type { Member } from "../types/member";
+
 /**
  * Auth context — ported from FED-Frontend/src/context/AuthContext.jsx.
  *
@@ -69,9 +72,12 @@ type AuthContextValue = {
   logout: () => Promise<void>;
   settarget: (t: string) => void;
   update: (...args: UpdateArgs) => void;
-  eventData: unknown;
-  memberData: unknown;
-  croppedImageFile: unknown;
+  // Hand-offs between pages. A caller assigns one of these on the context
+  // value just before navigating (an event to edit, a member to edit, a
+  // cropped photo) and the destination page reads it back.
+  eventData: FormRecord | null;
+  memberData: Member | null;
+  croppedImageFile: File | null;
 };
 
 type LoginArgs = [

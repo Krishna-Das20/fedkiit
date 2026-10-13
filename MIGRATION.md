@@ -130,9 +130,12 @@ XHR layer:
 
 ## What was ported
 
-**All 122 components**, keeping the `.jsx` extension (tsconfig has `allowJs`
-with `checkJs` off, so Next transpiles them without demanding annotations — the
-markup stays faithful instead of being rewritten).
+**All 122 components**. They were first ported keeping the `.jsx` extension
+(tsconfig has `allowJs` with `checkJs` off, so Next transpiled them without
+demanding annotations — the markup stayed faithful instead of being rewritten).
+They have since been converted to `.tsx` (and the plain `.js` helpers in `src/`
+to `.ts`) under the project's strict tsconfig; shared types live in
+`src/types/`. File names below keep the `.jsx` they had at the time.
 
 Home (Hero, About, Sponser, Feedback, Contact, Carousel, LiveEventPopup) ·
 Events + PastEvent + EventCard + EventModal + EventForm + ShareModal ·

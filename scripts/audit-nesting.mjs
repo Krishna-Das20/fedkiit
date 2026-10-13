@@ -29,7 +29,7 @@ const VOID = new Set([
 const files = process.argv.length > 2
   ? process.argv.slice(2)
   : execSync(
-      'git ls-files "src/**/*.jsx" "src/**/*.tsx" "app/**/*.jsx" "app/**/*.tsx"',
+      'git ls-files "src/**/*.tsx" "app/**/*.tsx"',
       { encoding: "utf8" },
     ).trim().split("\n").filter(Boolean);
 
