@@ -12,6 +12,7 @@ import Link from "next/link";
 const Events = () => {
   const authCtx = useContext(AuthContext);
   const [events, setEvents] = useState([]);
+  const [myCertificates, setMyCertificates] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const viewPath = "/profile/Events";
@@ -32,7 +33,42 @@ const Events = () => {
     "ADMIN",
   ];
 
+  // Presidency, directors, admins and the senior-executive account manage
+  // certificates for every event. Everyone else sees only the certificates
+  // issued to them — the events they took part in, whether before or after
+  // joining FED. Attendance plays no part: several events issued certificates
+  // without ever scanning attendance.
+  const canManageCertificates =
+    analyticsAccessRoles.includes(authCtx?.user?.access) ||
+    authCtx?.user?.email == "srex@fedkiit.com";
+
   useEffect(() => {
+    if (canManageCertificates || !authCtx?.user?.email) return;
+
+    const fetchMyCertificates = async () => {
+      try {
+        const response = await api.get("/api/certificate/myCertificates");
+        const certificates = response.data?.certificates ?? [];
+        setMyCertificates(
+          [...certificates].sort((a, b) => new Date(b.eventDate) - new Date(a.eventDate)),
+        );
+      } catch (error) {
+        setError({
+          message:
+            "Sorry for the inconvenience, we are having issues fetching your Certificates",
+        });
+        console.error("Error fetching certificates:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMyCertificates();
+  }, [authCtx?.user?.email, canManageCertificates]);
+
+  useEffect(() => {
+    if (!canManageCertificates) return;
+
     const fetchEventsData = async () => {
       try {
         const response = await api.get("/api/form/getAllForms");
@@ -81,7 +117,7 @@ const Events = () => {
     };
 
     fetchEventsData();
-  }, [authCtx?.user?.email]);
+  }, [authCtx?.user?.email, canManageCertificates]);
 
   const sortEventsByDate = (events) => {
     return events.sort((a, b) => new Date(b.info.eventDate) - new Date(a.info.eventDate));
@@ -95,6 +131,73 @@ const Events = () => {
   };
 
   // console.log("Event Access",authCtx?.user?.access);
+  if (!canManageCertificates) {
+    return (
+      <div className={styles.participatedEvents}>
+        <div className={styles.proHeading}>
+          <h3 className={styles.headInnerText}>
+            <span>Your</span> Certificates
+          </h3>
+        </div>
+
+        {isLoading ? (
+          <ComponentLoading />
+        ) : (
+          <>
+            {error && <div className={styles.error}>{error.message}</div>}
+
+            <div className={styles.tables}>
+              {myCertificates.length > 0 ? (
+                <table className={styles.eventsTable}>
+                  <thead>
+                    <tr>
+                      <th className={styles.mobilewidth}>Event Name</th>
+                      <th className={styles.mobilewidth}>Event Date</th>
+                      <th className={styles.mobilewidth}>Certificate</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {myCertificates.map((certificate) => (
+                      <tr key={certificate.certificateId}>
+                        <td className={styles.mobilewidth} style={{ fontWeight: "500", paddingRight: "10px" }}>
+                          {certificate.eventTitle}
+                        </td>
+                        <td style={{ fontWeight: "200" }}>
+                          {certificate.eventDate ? formatDate(certificate.eventDate) : "—"}
+                        </td>
+                        <td>
+                          <Link
+                            href={`/verify/certificate?id=${encodeURIComponent(certificate.certificateId)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <button
+                              style={{
+                                marginLeft: "auto",
+                                whiteSpace: "nowrap",
+                                height: "fit-content",
+                                color: "orange",
+                              }}
+                            >
+                              View
+                            </button>
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                !error && <p className={styles.noEvents}>No certificates have been issued to you yet</p>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className={styles.participatedEvents}>
       {authCtx?.user?.access !== "USER" ? (
