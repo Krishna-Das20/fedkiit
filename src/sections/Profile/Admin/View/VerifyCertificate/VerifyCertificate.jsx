@@ -51,7 +51,11 @@ const VerifyCertificate = () => {
           setCertificateData({
             imageSrc: response.data.imageSrc,
             certificateId: response.data.certificate.certificateId,
-            name: response.data.certificate.fieldValues?.name || "N/A",
+            name:
+              response.data.certificate.fieldValues?.name ||
+              response.data.certificate.fieldValues?.Name ||
+              response.data.certificate.fieldValues?.recipient_name ||
+              "N/A",
             email: response.data.certificate.email || "N/A",
             event: response.data.event?.name || "N/A",
             date: response.data.event?.createdAt || "N/A",
@@ -119,6 +123,7 @@ const VerifyCertificate = () => {
         <div className={styles.errorContainer}>
           <div className={styles.errorIcon}>✕</div>
           <h3>Invalid Certificate ID</h3>
+            <p>{error}</p>
         </div>
       </div>
     );

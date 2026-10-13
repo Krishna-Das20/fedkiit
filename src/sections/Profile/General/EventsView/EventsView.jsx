@@ -120,7 +120,12 @@ const Events = () => {
    * back with the certificate itself, so no extra request is needed.
    */
   const getCertificateForEvent = (formId) => {
-    const found = certificates.find((item) => item.event?.formId === formId);
+    const normalizedFormId = String(formId || "").toLowerCase();
+    const found = certificates.find(
+      (item) =>
+        String(item.event?.formId || "").toLowerCase() === normalizedFormId ||
+        String(item.event?.id || "").toLowerCase() === normalizedFormId
+    );
     return found ? found.cert : null;
   };
 
