@@ -529,11 +529,11 @@ const Chatbot = () => {
             .replace(/\[\s*LinkedIn:\s*(https?:\/\/[^\s,\]]+)\s*\]/gi, (_, u) => `[LinkedIn](${cleanUrl(u)})`)
             .replace(/\[\s*GitHub:\s*(https?:\/\/[^\s,\]]+)\s*\]/gi, (_, u) => `[GitHub](${cleanUrl(u)})`)
             // Convert unbracketed LinkedIn: url or GitHub: url
-            .replace(/(?:LinkedIn|Linkedin):\s*(https?:\/\/(?:www\.)?linkedin\.com\/[^\s,\]\)<]+)/gi, (_, u) => `[LinkedIn](${cleanUrl(u)})`)
-            .replace(/(?:GitHub|Github):\s*(https?:\/\/(?:www\.)?github\.com\/[^\s,\]\)<]+)/gi, (_, u) => `[GitHub](${cleanUrl(u)})`)
+            .replace(/(?:LinkedIn|Linkedin):\s*(https?:\/\/(?:www\.)?linkedin\.com\/[^\s,\]\)<]+)/gi, (_, u) => `[LinkedIn](${cleanUrl(u)})${u.trim().slice(cleanUrl(u).length)}`)
+            .replace(/(?:GitHub|Github):\s*(https?:\/\/(?:www\.)?github\.com\/[^\s,\]\)<]+)/gi, (_, u) => `[GitHub](${cleanUrl(u)})${u.trim().slice(cleanUrl(u).length)}`)
             // Standalone raw GitHub or LinkedIn URLs not already inside [text](url)
-            .replace(/(?<!\]\(|href=["'])(https?:\/\/(?:www\.)?linkedin\.com\/in\/[^\s,\]\)<]+)(?!\))/gi, (_, u) => `[LinkedIn](${cleanUrl(u)})`)
-            .replace(/(?<!\]\(|href=["'])(https?:\/\/(?:www\.)?github\.com\/[a-zA-Z0-9_.-]+(?:\/[a-zA-Z0-9_.-]+)*\/?)(?!\))/gi, (_, u) => `[GitHub](${cleanUrl(u)})`);
+            .replace(/(?<!\]\(|href=["']|\[)(https?:\/\/(?:www\.)?linkedin\.com\/in\/[^\s,\]\)<]+)(?!\))/gi, (_, u) => `[LinkedIn](${cleanUrl(u)})${u.trim().slice(cleanUrl(u).length)}`)
+            .replace(/(?<!\]\(|href=["']|\[)(https?:\/\/(?:www\.)?github\.com\/[a-zA-Z0-9_.-]+(?:\/[a-zA-Z0-9_.-]+)*\/?)(?!\))/gi, (_, u) => `[GitHub](${cleanUrl(u)})${u.trim().slice(cleanUrl(u).length)}`);
 
         if (typeof window !== 'undefined' && DOMPurify && typeof DOMPurify.sanitize === 'function') {
             return DOMPurify.sanitize(cleanText);

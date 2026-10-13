@@ -293,10 +293,10 @@ export default function ChatWidget() {
                         .replace(/\[\s*GitHub:\s*(https?:\/\/[^\s,\]]+),\s*LinkedIn:\s*(https?:\/\/[^\s,\]]+)\s*\]/gi, (_, u1, u2) => `([GitHub](${cleanUrl(u1)}) [LinkedIn](${cleanUrl(u2)}))`)
                         .replace(/\[\s*LinkedIn:\s*(https?:\/\/[^\s,\]]+)\s*\]/gi, (_, u) => `[LinkedIn](${cleanUrl(u)})`)
                         .replace(/\[\s*GitHub:\s*(https?:\/\/[^\s,\]]+)\s*\]/gi, (_, u) => `[GitHub](${cleanUrl(u)})`)
-                        .replace(/(?:LinkedIn|Linkedin):\s*(https?:\/\/(?:www\.)?linkedin\.com\/[^\s,\]\)<]+)/gi, (_, u) => `[LinkedIn](${cleanUrl(u)})`)
-                        .replace(/(?:GitHub|Github):\s*(https?:\/\/(?:www\.)?github\.com\/[^\s,\]\)<]+)/gi, (_, u) => `[GitHub](${cleanUrl(u)})`)
-                        .replace(/(?<!\]\(|href=["'])(https?:\/\/(?:www\.)?linkedin\.com\/in\/[^\s,\]\)<]+)(?!\))/gi, (_, u) => `[LinkedIn](${cleanUrl(u)})`)
-                        .replace(/(?<!\]\(|href=["'])(https?:\/\/(?:www\.)?github\.com\/[a-zA-Z0-9_.-]+(?:\/[a-zA-Z0-9_.-]+)*\/?)(?!\))/gi, (_, u) => `[GitHub](${cleanUrl(u)})`);
+                        .replace(/(?:LinkedIn|Linkedin):\s*(https?:\/\/(?:www\.)?linkedin\.com\/[^\s,\]\)<]+)/gi, (_, u) => `[LinkedIn](${cleanUrl(u)})${u.trim().slice(cleanUrl(u).length)}`)
+                        .replace(/(?:GitHub|Github):\s*(https?:\/\/(?:www\.)?github\.com\/[^\s,\]\)<]+)/gi, (_, u) => `[GitHub](${cleanUrl(u)})${u.trim().slice(cleanUrl(u).length)}`)
+                        .replace(/(?<!\]\(|href=["']|\[)(https?:\/\/(?:www\.)?linkedin\.com\/in\/[^\s,\]\)<]+)(?!\))/gi, (_, u) => `[LinkedIn](${cleanUrl(u)})${u.trim().slice(cleanUrl(u).length)}`)
+                        .replace(/(?<!\]\(|href=["']|\[)(https?:\/\/(?:www\.)?github\.com\/[a-zA-Z0-9_.-]+(?:\/[a-zA-Z0-9_.-]+)*\/?)(?!\))/gi, (_, u) => `[GitHub](${cleanUrl(u)})${u.trim().slice(cleanUrl(u).length)}`);
                     })()}
                   </ReactMarkdown>
                   <span className={styles.timestamp}>
