@@ -3,11 +3,25 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styles from './styles/BlogCard.module.scss';
 import { Blurhash } from "react-blurhash";
+import type { BlogAuthor, BlogPost } from '../../types/blog';
 
-function BlogCard(props) {
+type BlogCardProps = {
+  /** A post, or the post as JSON text. */
+  data: BlogPost | string | null | undefined;
+  customButtons?: React.ReactNode;
+  expandDescription?: boolean;
+  hideDescription?: boolean;
+  onClick?: () => void;
+  cardType?: 'default' | 'recent' | 'trending';
+  isRecentCard?: boolean;
+  // Passed by the blog pages but not applied by the card.
+  className?: string;
+};
+
+function BlogCard(props: BlogCardProps) {
   const { data, customButtons, expandDescription = false, hideDescription = false, onClick, cardType = 'default' } = props;
 
-  let processedData = data;
+  let processedData = data as BlogPost;
 
   if (typeof data === 'string') {
     try {
@@ -20,7 +34,7 @@ function BlogCard(props) {
     processedData = {};
   }
 
-  const titleRef = useRef(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const id = processedData.id || processedData._id;
   const title = processedData.title || processedData.blogTitle || 'Untitled Blog';
   const desc = processedData.desc || processedData.blogContent || processedData.blogSubtitle || '';
@@ -30,7 +44,7 @@ function BlogCard(props) {
   const summary = processedData.summary || processedData.metaDescription || desc;
   const blogLink = processedData.blogLink || processedData.mediumLink || 'https://medium.com/@fedkiit';
 
-  let parsedAuthor = { name: "Unknown", department: "N/A" };
+  let parsedAuthor: Partial<BlogAuthor> = { name: "Unknown", department: "N/A" };
 
   try {
     if (typeof author === 'string') {
@@ -65,7 +79,7 @@ function BlogCard(props) {
     console.error('Error handling author data:', err);
   }
 
-  const getTruncatedTitle = (titleText) => {
+  const getTruncatedTitle = (titleText: string) => {
     if (!titleText) return '';
     if (cardType === 'default') {
       const charLimit = 20;
@@ -80,7 +94,7 @@ function BlogCard(props) {
     return words.length <= wordLimit ? titleText : words.slice(0, wordLimit).join(' ') + '...';
   };
 
-  const handleReadMore = (e) => {
+  const handleReadMore = (e: React.SyntheticEvent) => {
     e.stopPropagation();
     window.open(blogLink, '_blank');
   };

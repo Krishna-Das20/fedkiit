@@ -2,9 +2,23 @@
 
 import React, { createContext, useState, useEffect } from 'react';
 
-export const RecoveryContext = createContext();
+type RecoveryState = {
+  email: string;
+  otp: string;
+  teamCode: string | null;
+  teamName: string | null;
+  successMessage: string | null;
+};
 
-const initialContext = {
+export type RecoveryContextValue = RecoveryState & {
+  setEmail: (newEmail: string) => void;
+  setOTP: (newOTP: string) => void;
+  setTeamCode: (newTeamCode: string | null) => void;
+  setTeamName: (newTeamName: string | null) => void;
+  setSuccessMessage: (newMessage: string | null) => void;
+};
+
+const initialContext: RecoveryState = {
   email: '',
   otp: '',
   teamCode: '',
@@ -12,7 +26,20 @@ const initialContext = {
   successMessage: ''
 };
 
-const RecoveryContextProvider = ({ children }) => {
+const noop = () => {};
+
+// Every consumer sits under RecoveryContextProvider (mounted in Providers), so
+// this default is never read; it only gives the context its type.
+export const RecoveryContext = createContext<RecoveryContextValue>({
+  ...initialContext,
+  setEmail: noop,
+  setOTP: noop,
+  setTeamCode: noop,
+  setTeamName: noop,
+  setSuccessMessage: noop,
+});
+
+const RecoveryContextProvider = ({ children }: { children: React.ReactNode }) => {
   // The original seeded this from localStorage inside the useState initialiser.
   // That runs during server rendering under Next.js, where localStorage does not
   // exist, so the stored values are restored in a mount effect instead.
@@ -30,21 +57,21 @@ const RecoveryContextProvider = ({ children }) => {
     }
   }, []);
 
-  const setEmail = (newEmail) => {
+  const setEmail = (newEmail: string) => {
     localStorage.setItem('recoveryEmail', newEmail);
     setState(prevState => ({ ...prevState, email: newEmail }));
   };
 
-  const setOTP = (newOTP) => {
+  const setOTP = (newOTP: string) => {
     localStorage.setItem('recoveryOTP', newOTP);
     setState(prevState => ({ ...prevState, otp: newOTP }));
   };
 
-  const setTeamCode = (newTeamCode) => {
+  const setTeamCode = (newTeamCode: string | null) => {
     setState(prevState => ({ ...prevState, teamCode: newTeamCode }));
   };
 
-  const setTeamName = (newTeamName) => {
+  const setTeamName = (newTeamName: string | null) => {
     setState(prevState => ({ ...prevState, teamName: newTeamName }));
   };
 
@@ -55,7 +82,7 @@ const RecoveryContextProvider = ({ children }) => {
   //   }
   // }, []);
 
-  const setSuccessMessage = (newMessage) => {
+  const setSuccessMessage = (newMessage: string | null) => {
     setState(prevState => ({ ...prevState, successMessage: newMessage }));
   }
 

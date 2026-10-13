@@ -6,11 +6,14 @@ export function currentBatchEmailPrefix(now = new Date()) {
   return String(now.getFullYear()).slice(-2);
 }
 
-export function emailLocalPart(email) {
+export function emailLocalPart(email: string) {
   return email.split("@")[0]?.trim().toLowerCase() ?? "";
 }
 
-export function isCurrentBatchEmail(email, now = new Date()) {
+export function isCurrentBatchEmail(
+  email: string | null | undefined,
+  now = new Date(),
+) {
   if (!email) return false;
   const local = emailLocalPart(email);
   const prefix = currentBatchEmailPrefix(now);
@@ -23,12 +26,18 @@ export function batchRegistrationErrorMessage(now = new Date()) {
   return `Registration is not open for ${year} batch students (emails starting with ${prefix}). If you feel this is an error, contact fedkiit@gmail.com.`;
 }
 
-export function isBatchRegistrationBlocked(email, now = new Date()) {
+export function isBatchRegistrationBlocked(
+  email: string | null | undefined,
+  now = new Date(),
+) {
   return isCurrentBatchEmail(email, now);
 }
 
 /** Strip common markdown syntax for short card previews. */
-export function stripMarkdownForPreview(text, maxLength = 160) {
+export function stripMarkdownForPreview(
+  text: string | null | undefined,
+  maxLength = 160,
+) {
   if (!text) return "";
   const plain = String(text)
     .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")

@@ -24,7 +24,7 @@ import Footer from "@/src/layouts/Footer/Footer";
  * DOM. Only the handful of pages that call `useSearchParams()` need a boundary,
  * and they each declare their own.
  */
-export default function MainLayout({ children }) {
+export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const path = pathname?.toLowerCase() ?? "";
   const isOmegaPage = path === "/omega";

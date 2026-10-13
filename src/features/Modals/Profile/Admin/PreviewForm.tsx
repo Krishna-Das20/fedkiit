@@ -24,6 +24,15 @@ import {
   isBatchRegistrationBlocked,
 } from "../../../../utils/batchRestriction";
 import { getEventSlug } from "../../../../utils/slug";
+import type { AlertProps } from "../../../../microInteraction/Alert/Alert";
+import type { ApiError } from "../../../../types/api";
+import type {
+  EventDraft,
+  FieldAnswer,
+  FieldValidation,
+  FormFieldDef,
+  FormSection,
+} from "../../../../types/form";
 
 const operators = [
   { label: "match", value: "===" },
@@ -40,7 +49,10 @@ const hasOptions = ["select", "checkbox", "radio"];
  * rest strings. Compared trimmed: options are typed "A, B, C", and answers
  * saved before the options were trimmed kept the leading space.
  */
-const answerMatches = (answer, option) => {
+const answerMatches = (
+  answer: FieldAnswer | undefined,
+  option: string | null | undefined,
+) => {
   const want = String(option ?? "").trim();
   if (Array.isArray(answer)) {
     return answer.some((item) => String(item).trim() === want);
@@ -55,13 +67,29 @@ const answerMatches = (answer, option) => {
  * written for another — and a ticked checkbox crashed the check outright,
  * since its answer is an array with no `trim`.
  */
-const matchedRule = (section) =>
+const matchedRule = (section: FormSection | null | undefined) =>
   section?.validations
     ?.filter((rule) => rule.field_id)
     .find((rule) => {
       const field = section.fields?.find((fld) => fld._id === rule.field_id);
       return field && answerMatches(field.onChangeValue, rule.values);
     });
+
+type PreviewFormProps = {
+  isEditing?: boolean;
+  eventData: EventDraft;
+  /** The stored form: its id is what registration and team joining post. */
+  form: EventDraft & { info?: EventDraft };
+  sections?: FormSection[];
+  open?: boolean;
+  /** Auto-generated sections (the payment step) appended after `sections`. */
+  meta?: FormSection[];
+  handleClose?: () => void;
+  showCloseBtn?: boolean;
+  teamCode?: string | null;
+  inline?: boolean;
+  eventId?: string;
+};
 
 const PreviewForm = ({
   isEditing,
@@ -78,30 +106,36 @@ const PreviewForm = ({
   // itself is one copy, so a change to a step cannot land in one mode and not
   // the other.
   inline = false,
-}) => {
+}: PreviewFormProps) => {
   const router = useRouter();
   const authCtx = useContext(AuthContext);
   const [data, setdata] = useState(sections);
-  const [activeSection, setactiveSection] = useState(
+  const [activeSection, setactiveSection] = useState<FormSection | "">(
     data !== undefined ? data[0] : ""
   );
-  const [isCompleted, setisCompleted] = useState([]);
+  // Ids of the sections visited so far, then "Submitted" once sent.
+  const [isCompleted, setisCompleted] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isMicroLoading, setIsMicroLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [alert, setAlert] = useState(null);
-  const wrapperRef = useRef(null);
+  const [alert, setAlert] = useState<AlertProps | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const recoveryCtx = useContext(RecoveryContext);
   const { setTeamCode, setTeamName, setSuccessMessage } = recoveryCtx;
   const [formData, setFormData] = useState(eventData);
-  const [code, setcode] = useState(null);
-  const [team, setTeam] = useState(null);
-  const [message, setMessage] = useState(null);
+  const [code, setcode] = useState<string | null>(null);
+  const [team, setTeam] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
-  let currentSection =
+  // Typed as present: the steps below only run once a section is active, and
+  // the guards that do check it are kept as they were.
+  const currentSection = (
     data !== undefined
-      ? data.find((section) => section._id === activeSection._id)
-      : null;
+      ? data.find(
+          (section) => section._id === (activeSection as FormSection)._id
+        )
+      : null
+  ) as FormSection;
 
   useEffect(() => {
     setTimeout(() => {
@@ -153,14 +187,17 @@ const PreviewForm = ({
     setactiveSection(newSections[0]);
   };
 
-  const handleChange = (field, value) => {
+  const handleChange = (field: FormFieldDef, value: FieldAnswer) => {
     const updatedSections = data.map((section) => {
       const updatedFields = section.fields.map((fld) => {
         if (field._id === fld._id) {
           if (fld.type === "checkbox") {
-            const updatedOnChangeValue = fld.onChangeValue.includes(value)
-              ? fld.onChangeValue.filter((val) => val !== value)
-              : [...fld.onChangeValue, value];
+            // A checkbox answer is the list of ticked options.
+            const ticked = fld.onChangeValue as string[];
+            const option = value as string;
+            const updatedOnChangeValue = ticked.includes(option)
+              ? ticked.filter((val) => val !== option)
+              : [...ticked, option];
 
             return {
               ...fld,
@@ -223,7 +260,9 @@ const PreviewForm = ({
           return failedJoinDestination(joinResponse?.data?.message);
         } catch (joinErr) {
           console.error("Auto-join failed:", joinErr);
-          return failedJoinDestination(joinErr?.response?.data?.message);
+          return failedJoinDestination(
+            (joinErr as ApiError)?.response?.data?.message
+          );
         }
       };
 
@@ -232,7 +271,7 @@ const PreviewForm = ({
       // itself succeeded, so they go to the team page, which renders the team
       // search for an unaffiliated registrant, rather than to /Events with no
       // explanation. The reason rides along as a query param for the toast.
-      const failedJoinDestination = (reason) => {
+      const failedJoinDestination = (reason: string | undefined) => {
         const query = new URLSearchParams({ toast: "join_failed" });
         if (reason) query.set("reason", reason);
         const formSlug = getEventSlug(form) || form.id;
@@ -315,16 +354,21 @@ const PreviewForm = ({
     return true;
   };
 
-  const matchCondition = (field, valid) => {
+  const matchCondition = (field: FormFieldDef, valid: FieldValidation) => {
+    // Checkbox answers are arrays, the other option types strings. A File has
+    // no length, which is why image fields carry no length rule.
+    const answer = field.onChangeValue as string | string[];
     const fieldLength = hasOptions.includes(field.type)
       ? field.type === "checkbox"
-        ? field.onChangeValue.length
-        : field.onChangeValue.split(",").length
-      : field.onChangeValue.length;
+        ? answer.length
+        : (answer as string).split(",").length
+      : answer.length;
 
     const operator = valid?.operator;
-    const validLength =
-      valid.type === "length" ? Number(valid?.value) : valid?.value;
+    // Compared as numbers; JavaScript coerces a non-length rule's value.
+    const validLength = (
+      valid.type === "length" ? Number(valid?.value) : valid?.value
+    ) as number;
 
     switch (operator) {
       case "===":
@@ -332,9 +376,9 @@ const PreviewForm = ({
       case "!==":
         return fieldLength !== validLength;
       case "includes":
-        return field.onChangeValue?.includes(valid?.value);
+        return answer?.includes(valid?.value as string);
       case "!includes":
-        return !field.onChangeValue?.includes(valid.value);
+        return !answer?.includes(valid.value as string);
       case "<":
         return fieldLength < validLength;
       case ">":
@@ -477,14 +521,15 @@ const PreviewForm = ({
         (sec.name === "Join Team" && isCompleted.includes(sec._id))
     );
 
-    formData.append("_id", form.id);
+    // FormData stringifies every non-Blob value; String() makes that explicit.
+    formData.append("_id", String(form.id));
     formData.append("sections", JSON.stringify(constructToSave()));
-    formData.append("createTeam", isCreateTeam);
-    formData.append("joinTeam", isJoinTeam);
+    formData.append("createTeam", String(isCreateTeam));
+    formData.append("joinTeam", String(isJoinTeam));
 
     mediaFields.forEach((field) => {
       if (field.onChangeValue) {
-        formData.append(field.name, field.onChangeValue);
+        formData.append(field.name, field.onChangeValue as File);
       }
     });
 
@@ -504,7 +549,11 @@ const PreviewForm = ({
       });
 
       if (response.status === 200 || response.status === 201) {
-        const updatedRegForm = [...authCtx.user.regForm, form.id];
+        const updatedRegForm = [...authCtx.user.regForm, form.id!];
+        // github and linkedin live under `extra`, and blurhash and token are
+        // the last two arguments. This read `user.github` / `user.linkedin`
+        // (both undefined) and stopped at regForm, so registering for an
+        // event wiped all four from the stored session.
         authCtx.update(
           authCtx.user.name,
           authCtx.user.email,
@@ -514,12 +563,14 @@ const PreviewForm = ({
           authCtx.user.college,
           authCtx.user.contactNo,
           authCtx.user.year,
-          authCtx.user.github,
-          authCtx.user.linkedin,
+          authCtx.user.extra.github,
+          authCtx.user.extra.linkedin,
           authCtx.user.extra.designation,
           authCtx.user.access,
           authCtx.user.editProfileCount,
-          updatedRegForm // Pass the updated regForm
+          updatedRegForm, // Pass the updated regForm
+          authCtx.user.blurhash,
+          authCtx.user.token
         );
         setAlert({
           type: "success",
@@ -560,7 +611,7 @@ const PreviewForm = ({
       setAlert({
         type: "error",
         message:
-          error?.response?.data?.message ||
+          (error as ApiError)?.response?.data?.message ||
           "There was an error submitting the form. Please try again.",
         position: "bottom-right",
         duration: 3000,
@@ -581,21 +632,24 @@ const PreviewForm = ({
       return false;
     }
 
-    const { nextSection } = inboundList();
+    // Never null here: currentSection was checked above.
+    const { nextSection } = inboundList()!;
 
     if (nextSection) {
       setisCompleted((prev) => [...prev, currentSection._id]);
       setactiveSection(nextSection);
     }
 
-    if (!nextSection || nextSection === "submit") {
+    // inboundList resolves a "submit" target to null, so a missing section is
+    // the only way the form ends here.
+    if (!nextSection) {
       setisCompleted((prev) => [...prev, currentSection._id, "Submitted"]);
       return handleSubmit();
     }
   };
 
   const onBack = () => {
-    const { backSection } = inboundList();
+    const { backSection } = inboundList()!;
     if (backSection) {
       // Pop the section being returned to off the visited stack. The one
       // being left was never pushed (that only happens on Next), so a path the
@@ -633,10 +687,10 @@ const PreviewForm = ({
 
     const handleDownloadQR = async () => {
       try {
-        let imageUrl =
+        const imageUrl =
           typeof receiverDetails.media === "string"
             ? receiverDetails.media
-            : URL.createObjectURL(receiverDetails.media);
+            : URL.createObjectURL(receiverDetails.media as File);
 
         let blobUrl = imageUrl;
 
@@ -658,7 +712,9 @@ const PreviewForm = ({
         }
       } catch (error) {
         console.error("Error downloading QR code:", error);
-        alert("Failed to download QR code.");
+        // `alert` is this component's toast state here, so the browser's
+        // dialog has to be named explicitly â€” calling the state threw.
+        window.alert("Failed to download QR code.");
       }
     };
 
@@ -977,7 +1033,7 @@ const PreviewForm = ({
                     justifyContent: "center",
                   }}
                 >
-                  {inboundList() && inboundList().backSection && (
+                  {inboundList()?.backSection && (
                     <Button
                       style={{
                         marginRight: "12px",

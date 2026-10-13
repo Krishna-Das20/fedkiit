@@ -11,7 +11,7 @@ const getBoxVariant = () => {
   };
 };
 
-const AnimatedBox = ({ children }) => {
+const AnimatedBox = ({ children }: { children: React.ReactNode }) => {
   const control = useAnimation();
   const [ref, inView] = useInView({
     triggerOnce: true,

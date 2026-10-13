@@ -5,17 +5,39 @@ import Link from "next/link";
 import { api } from "../../../services";
 import styles from "./styles/EventsSection.module.scss";
 import { cdn } from "../../../utils/cloudinary";
+import type { EventInfo } from "@/lib/types/event";
+
+/** A getAllForms record, read defensively: older rows lack most fields. */
+type ListedEvent = {
+  _id?: string;
+  date?: string;
+  info?: EventInfo & {
+    _id?: string;
+    bannerImage?: string;
+    eventDescription?: string;
+  };
+};
+
+type EventTile = {
+  id?: string;
+  title: string;
+  tag: string;
+  description: string;
+  date: string;
+  banner: string;
+  link: string;
+};
 
 /** Shown when an event carries no image of its own. */
 const EVENT_BANNER_FALLBACK = "/fedkiit-logo.png";
 
 export default function HomeEventsSection() {
-  const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<EventTile[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUpcomingEvents = async () => {
-      let eventList = [];
+      let eventList: ListedEvent[] = [];
 
       try {
         const response = await api.get("/api/form/getAllForms");
@@ -35,7 +57,7 @@ export default function HomeEventsSection() {
       const liveOrUpcoming = eventList.filter((ev) => !ev.info?.isEventPast);
       const pastEvents = eventList.filter((ev) => ev.info?.isEventPast);
 
-      let sortedEvents = [];
+      let sortedEvents: ListedEvent[] = [];
 
       if (liveOrUpcoming.length > 0) {
         // Ranked by `eventPriority` first, then date — the same order the
@@ -43,8 +65,9 @@ export default function HomeEventsSection() {
         // sets in the event form had no effect on which three events the home
         // page features, which is the one place it matters most.
         sortedEvents = [...liveOrUpcoming].sort((a, b) => {
-          const priorityA = Number.parseInt(a.info?.eventPriority, 10);
-          const priorityB = Number.parseInt(b.info?.eventPriority, 10);
+          // parseInt stringifies its argument anyway; String() says so.
+          const priorityA = Number.parseInt(String(a.info?.eventPriority), 10);
+          const priorityB = Number.parseInt(String(b.info?.eventPriority), 10);
           // Unranked events sort last rather than ahead of everything.
           const rankA = Number.isNaN(priorityA) ? Infinity : priorityA;
           const rankB = Number.isNaN(priorityB) ? Infinity : priorityB;
@@ -66,8 +89,8 @@ export default function HomeEventsSection() {
       // Pick top 3 latest events
       const displayEvents = sortedEvents.slice(0, 3);
 
-      const formatted = displayEvents.map((ev) => {
-        const info = ev.info || {};
+      const formatted = displayEvents.map((ev): EventTile => {
+        const info: NonNullable<ListedEvent["info"]> = ev.info || {};
 
         // Format Date string cleanly
         let formattedDate = "Upcoming";

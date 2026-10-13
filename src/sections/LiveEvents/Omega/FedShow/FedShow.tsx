@@ -12,7 +12,7 @@ import speakersData from "../../../../data/liveEvents/omega/Speakers.json";
 
 
 function FedShow() {
-  const [remainingTime, setRemainingTime] = useState("");
+  const [remainingTime, setRemainingTime] = useState<string | null>("");
   const [btnTxt, setBtnTxt] = useState("FREE PASS");
 
   const { ref: refImg1, inView: inViewImg1 } = useInView({

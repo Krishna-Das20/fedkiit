@@ -23,6 +23,9 @@ import {
 import { MarkdownContent } from "../../components/Core";
 import { getEventSlug, matchEvent } from "../../utils/slug";
 import style from "./styles/EventDetail.module.scss";
+import type { AlertProps } from "@/src/microInteraction/Alert/Alert";
+import type { EventInfo } from "@/lib/types/event";
+import type { FormRecord } from "@/src/types/form";
 
 /**
  * /Events/:eventId — the event detail page.
@@ -36,19 +39,19 @@ import style from "./styles/EventDetail.module.scss";
  */
 const EventDetail = () => {
   const router = useRouter();
-  const { eventId } = useParams();
+  const { eventId } = useParams<{ eventId: string }>();
   const authCtx = useContext(AuthContext);
 
-  const [info, setInfo] = useState({});
-  const [data, setData] = useState(null);
+  const [info, setInfo] = useState<EventInfo>({});
+  const [data, setData] = useState<FormRecord | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [alert, setAlert] = useState(null);
+  const [alert, setAlert] = useState<AlertProps | null>(null);
   const [isMicroLoading, setIsMicroLoading] = useState(false);
-  const [remainingTime, setRemainingTime] = useState("");
+  const [remainingTime, setRemainingTime] = useState<string | null>("");
   const [btnTxt, setBtnTxt] = useState("Register Now");
-  const [ongoingEvents, setOngoingEvents] = useState([]);
+  const [ongoingEvents, setOngoingEvents] = useState<FormRecord[]>([]);
   const [isShareOpen, setShareOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
 
@@ -71,7 +74,7 @@ const EventDetail = () => {
       try {
         const response = await api.get("/api/form/getAllForms");
         if (response.status === 200) {
-          const fetchedEvents = response.data.events ?? [];
+          const fetchedEvents: FormRecord[] = response.data.events ?? [];
           setOngoingEvents(fetchedEvents.filter((e) => !e.info.isEventPast));
 
           const eventData = fetchedEvents.find((e) => matchEvent(e, eventId));
@@ -111,7 +114,7 @@ const EventDetail = () => {
 
   const calculateRemainingTime = useCallback(() => {
     const regStartDate = parse(
-      info.regDateAndTime,
+      info.regDateAndTime as string,
       "MMMM do yyyy, h:mm:ss a",
       new Date()
     );

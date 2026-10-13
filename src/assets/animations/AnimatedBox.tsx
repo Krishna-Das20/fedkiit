@@ -2,16 +2,24 @@
 
 import { motion, useAnimation } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { useEffect } from 'react'; 
+import { useEffect, type ReactNode } from 'react';
 
-const getBoxVariant = (direction) => {
+type Direction = 'left' | 'right';
+
+const getBoxVariant = (direction?: Direction) => {
   return {
     visible: { opacity: 1, x: 0, transition: { duration: 0.5 } },
     hidden: { opacity: 0, x: direction === 'left' ? -100 : 100 }
   };
 };
 
-export const AnimatedBox = ({ children, direction }) => {
+export const AnimatedBox = ({
+  children,
+  direction,
+}: {
+  children: ReactNode;
+  direction?: Direction;
+}) => {
   const control = useAnimation();
   const [ref, inView] = useInView({
     triggerOnce: true,

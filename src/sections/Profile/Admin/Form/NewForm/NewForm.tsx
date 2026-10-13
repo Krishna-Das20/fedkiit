@@ -11,8 +11,13 @@ import moment from "moment";
 import { nanoid } from "nanoid";
 import { Alert, MicroLoading } from "../../../../../microInteraction";
 import { api } from "../../../../../services";
+import type { AlertProps } from "../../../../../microInteraction/Alert/Alert";
+import type { EventDraft, FormSection } from "../../../../../types/form";
 
-export const getOutboundList = (array, index) => {
+export const getOutboundList = <T extends { _id: string }>(
+  array: T[],
+  index: string | null | undefined,
+): { nextSection: T | null; backSection: T | null } => {
   const getIndex = array.findIndex((sec) => sec._id === index);
 
   const prv_element = array[getIndex - 1];
@@ -23,6 +28,17 @@ export const getOutboundList = (array, index) => {
     backSection: prv_element || null,
   };
   return outbound;
+};
+
+/**
+ * The event as this form edits it. A new event starts with every one of these
+ * set, and the save path reads them without checks, so they are required here.
+ */
+type Draft = EventDraft & {
+  receiverDetails: NonNullable<EventDraft["receiverDetails"]>;
+  isPublic: boolean;
+  isRegistrationClosed: boolean;
+  isEventPast: boolean;
 };
 
 const TEAM_SIZE = [
@@ -36,13 +52,13 @@ const TEAM_SIZE = [
 ];
 
 function NewForm() {
-  const scrollRef = useRef(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [isVisibility, setisVisibility] = useState(false);
   const authCtx = useContext(AuthContext);
-  const [alert, setAlert] = useState(null);
+  const [alert, setAlert] = useState<AlertProps | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isEditing, setisEditing] = useState(false);
-  const [data, setdata] = useState({
+  const [data, setdata] = useState<Draft>({
     _id: nanoid(),
     eventTitle: "",
     eventdescription: "",
@@ -96,7 +112,7 @@ function NewForm() {
     // isPublic: false,
   });
 
-  const [sections, setsections] = useState([
+  const [sections, setsections] = useState<FormSection[]>([
     {
       _id: nanoid(),
       name: "Basic Details",
@@ -131,7 +147,9 @@ function NewForm() {
       ],
     },
   ]);
-  const [paymentSection, setpaymentSection] = useState(null);
+  const [paymentSection, setpaymentSection] = useState<FormSection | null>(
+    null
+  );
   const [showPreview, setshowPreview] = useState(false);
 
   useEffect(() => {
@@ -144,7 +162,7 @@ function NewForm() {
         isPublic: info.isPublic,
         isRegistrationClosed: info.isRegistrationClosed,
         isEventPast: info.isEventPast,
-      });
+      } as Draft);
       setsections(storedSections);
 
       // Restore the payment step as well.
@@ -430,7 +448,8 @@ function NewForm() {
         form.append("media", data.receiverDetails.media);
       }
 
-      form.append("upi", data.receiverDetails.upi);
+      // FormData stringifies a missing UPI to "undefined"/"null", as before.
+      form.append("upi", String(data.receiverDetails.upi));
 
       // `receiverDetails` itself is deleted from the payload below — the generic
       // loop stringifies it to "[object Object]" — so every nested value has to
@@ -441,9 +460,10 @@ function NewForm() {
       form.append("paymentMessage", data.receiverDetails.message ?? "");
 
       Object.keys(data).forEach((key) => {
-        const value = data[key];
+        const value = data[key as keyof Draft];
         if (key !== "eventImg") {
-          form.append(key, value);
+          // FormData stringifies every non-Blob value (booleans, numbers).
+          form.append(key, value as string | Blob);
         }
       });
 
@@ -464,7 +484,7 @@ function NewForm() {
       }
 
       if (isEditing) {
-        form.append("id", authCtx.eventData?.id);
+        form.append("id", authCtx.eventData!.id);
       }
 
       if (data._id) {
@@ -607,7 +627,7 @@ function NewForm() {
         });
       }
       setTimeout(() => {
-        scrollRef.current.scrollIntoView({
+        scrollRef.current!.scrollIntoView({
           behavior: "smooth",
           block: "nearest",
         });
@@ -772,7 +792,10 @@ function NewForm() {
    * a fresh one on each rebuild would leave the preceding sections pointing at a
    * section that no longer exists, and the form would dead-end before payment.
    */
-  const buildPaymentSection = (mode, existingId) => ({
+  const buildPaymentSection = (
+    mode: string,
+    existingId?: string
+  ): FormSection => ({
     _id: existingId || nanoid(),
     name: "Payment Details",
     description:
@@ -849,7 +872,7 @@ function NewForm() {
     ],
   });
 
-  const onChangeEventType = (value) => {
+  const onChangeEventType = (value: string) => {
     setdata({ ...data, eventType: value, eventAmount: "" });
 
     if (value === "Paid") {
@@ -859,7 +882,7 @@ function NewForm() {
     }
   };
 
-  const onChangePaymentMode = (mode) => {
+  const onChangePaymentMode = (mode: "QR" | "Link") => {
     setdata({
       ...data,
       receiverDetails: { ...data.receiverDetails, mode },
@@ -885,7 +908,7 @@ function NewForm() {
 
     // Anything that pointed at a dropped section now points nowhere. Clearing it
     // lets the rewiring below claim it; left alone it would dead-end the form.
-    const staleIds = new Set(stale.map((section) => section._id));
+    const staleIds = new Set<string | null>(stale.map((section) => section._id));
     formatedData.forEach((section) => {
       section.validations?.forEach((validation) => {
         if (staleIds.has(validation.onNext)) validation.onNext = null;
@@ -916,7 +939,7 @@ function NewForm() {
     return formatedData;
   };
 
-  const handleChangeParticipantType = (value) => {
+  const handleChangeParticipantType = (value: string) => {
     const isHavingTeamSection = sections.some(
       (section) => section.name === "Team Members"
     );
@@ -1265,7 +1288,10 @@ function NewForm() {
               type="date"
               style={{ width: "88%" }}
               value={data.eventDate}
-              onChange={(date) => setdata({ ...data, eventDate: date })}
+              // Single-date picker: never a range.
+              onChange={(date) =>
+                setdata({ ...data, eventDate: date as Date | null })
+              }
             />
             <Input
               placeholder="Select Event Type"
@@ -1303,7 +1329,9 @@ function NewForm() {
                   ]}
                   style={{ width: "88%" }}
                   value={data.receiverDetails?.mode || "QR"}
-                  onChange={(value) => onChangePaymentMode(value)}
+                  onChange={(value) =>
+                    onChangePaymentMode(value as "QR" | "Link")
+                  }
                 />
 
                 {(data.receiverDetails?.mode || "QR") === "Link" ? (

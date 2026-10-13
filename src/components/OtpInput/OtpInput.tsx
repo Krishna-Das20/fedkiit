@@ -11,13 +11,22 @@ import { X } from "lucide-react";
 import { api } from "../../services";
 import { Alert, MicroLoading } from "../../microInteraction";
 import { useRouter } from "next/navigation";
+import type { AlertProps } from "@/src/microInteraction/Alert/Alert";
+import type { ApiError } from "@/src/types/api";
 
 // `NEXT_PUBLIC_OTP_LENGTH` is the same variable `lib/services/otp.ts` generates
 // codes from. Next inlines it at build time, so it must be referenced by its
 // full literal name rather than looked up dynamically.
 const OTP_LENGTH = Number(process.env.NEXT_PUBLIC_OTP_LENGTH) || 4;
 
-const OtpInput = (props) => {
+type OtpInputProps = {
+  /** Sign-up verification; otherwise this is the password-reset screen. */
+  isSignUp?: boolean;
+  onHandleVerfiy?: (otp: string) => void | Promise<void>;
+  handleClose?: () => void;
+};
+
+const OtpInput = (props: OtpInputProps) => {
   const { email } = useContext(RecoveryContext);
   const [timerCount, setTimer] = useState(60);
   // Driven by the same variable the server generates codes from, so the number
@@ -27,12 +36,12 @@ const OtpInput = (props) => {
     Array(OTP_LENGTH).fill(""),
   );
   const [disable, setDisable] = useState(true);
-  const inputRefs = useRef([]);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [cnfPassword, setCnfPassword] = useState("");
   const [error, setError] = useState("");
-  const [alert, setAlert] = useState(null);
+  const [alert, setAlert] = useState<AlertProps | null>(null);
   const [loading, setLoading] = useState(false);
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -58,21 +67,21 @@ const OtpInput = (props) => {
     return () => clearInterval(interval);
   }, [disable]);
 
-  const handleChange = (e, index) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const value = e.target.value;
     if (/^\d$/.test(value) || value === "") {
       const newOTPinput = [...OTPinput];
       newOTPinput[index] = value;
       setOTPinput(newOTPinput);
       if (value !== "" && index < inputRefs.current.length - 1) {
-        inputRefs.current[index + 1].focus();
+        inputRefs.current[index + 1]!.focus();
       }
     }
   };
 
-  const handleKeyDown = (e, index) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
     if (e.key === "Backspace" && !OTPinput[index] && index > 0) {
-      inputRefs.current[index - 1].focus();
+      inputRefs.current[index - 1]!.focus();
     }
   };
 
@@ -124,7 +133,9 @@ const OtpInput = (props) => {
         // toast.error(response.error);
         setAlert({
           type: "error",
-          message: error?.response?.message || "Error in generating otp",
+          // Read `response.message` before, which axios never sets, so the
+          // server's reason was always replaced by the generic text.
+          message: (error as ApiError)?.response?.data?.message || "Error in generating otp",
           position: "bottom-right",
           duration: 2800,
         });
@@ -134,16 +145,7 @@ const OtpInput = (props) => {
     }
   };
 
-  const verifyOTP = () => {
-    const enteredOTP = OTPinput.join("");
-    if (enteredOTP === String(otp)) {
-      router.push("/reset");
-    } else {
-      alert("Incorrect OTP, please try again or resend.");
-    }
-  };
-
-  const changePassword = async (e) => {
+  const changePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     const enteredOTP = OTPinput.join("");
     // console.log("enteredOtp:", enteredOTP);
@@ -187,7 +189,7 @@ const OtpInput = (props) => {
     } catch (error) {
       setAlert({
         type: "error",
-        message: error?.response?.data?.message || "Changing Password Failed",
+        message: (error as ApiError)?.response?.data?.message || "Changing Password Failed",
         position: "bottom-right",
         duration: 2800,
       });
@@ -203,7 +205,8 @@ const OtpInput = (props) => {
     const enteredOTP = OTPinput.join("");
     // console.log(enteredOTP);
     // console.log(password);
-    onHandleVerfiy(enteredOTP);
+    // Only rendered when isSignUp, which always comes with this handler.
+    onHandleVerfiy!(enteredOTP);
   };
 
   return (
@@ -241,8 +244,10 @@ const OtpInput = (props) => {
                 {OTPinput.map((_, index) => (
                   <div className={style.otpBox} key={index}>
                     <input
-                      ref={(el) => (inputRefs.current[index] = el)}
-                      maxLength="1"
+                      ref={(el) => {
+                        inputRefs.current[index] = el;
+                      }}
+                      maxLength={1}
                       className={style.singleInput}
                       type="text"
                       value={OTPinput[index]}

@@ -4,8 +4,8 @@ import React, { useEffect, useRef, useState } from "react";
 import styles from "./styles/CustomCursor.module.scss";
 
 const CustomCursor = () => {
-  const dotRef = useRef(null);
-  const ringRef = useRef(null);
+  const dotRef = useRef<HTMLDivElement>(null);
+  const ringRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const mousePos = useRef({ x: -100, y: -100 });
@@ -16,7 +16,7 @@ const CustomCursor = () => {
       return undefined;
     }
 
-    const handleMouseMove = (e) => {
+    const handleMouseMove = (e: MouseEvent) => {
       mousePos.current = { x: e.clientX, y: e.clientY };
       if (!isVisible) setIsVisible(true);
 
@@ -24,7 +24,7 @@ const CustomCursor = () => {
         dotRef.current.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
       }
 
-      const target = e.target;
+      const target = e.target as Element | null;
       if (
         target &&
         (target.closest("a, button, input, textarea, select, [role='button'], .clickable") !== null)
@@ -47,7 +47,7 @@ const CustomCursor = () => {
     document.addEventListener("mouseleave", handleMouseLeave);
     document.addEventListener("mouseenter", handleMouseEnter);
 
-    let animId;
+    let animId: number;
     const renderRing = () => {
       ringPos.current.x += (mousePos.current.x - ringPos.current.x) * 0.18;
       ringPos.current.y += (mousePos.current.y - ringPos.current.y) * 0.18;

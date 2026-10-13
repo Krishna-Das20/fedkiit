@@ -3,10 +3,12 @@
 import React, { useState, useEffect } from "react";
 import styles from "./styles/TabBar.module.scss";
 
-const TabBar = ({ headings }) => {
-  const [activeTab, setActiveTab] = useState(null);
+type Heading = { id: string; text: string };
 
-  const handleScrollTo = (id) => {
+const TabBar = ({ headings }: { headings: Heading[] }) => {
+  const [activeTab, setActiveTab] = useState<string | null>(null);
+
+  const handleScrollTo = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
       element.scrollIntoView({ behavior: "smooth", block: "start" });

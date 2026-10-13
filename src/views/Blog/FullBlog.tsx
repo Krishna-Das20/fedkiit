@@ -8,12 +8,13 @@ import BlogCard from "../../components/BlogCard/BlogCard";
 import { api } from "../../services";
 import { ComponentLoading } from "../../microInteraction";
 import { useRouter } from "next/navigation";
+import type { BlogPost, ListedBlog } from "../../types/blog";
 
 const FullBlog = () => {
   const router = useRouter();
-  const [blogs, setBlogs] = useState([]);
+  const [blogs, setBlogs] = useState<ListedBlog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilter, setShowFilter] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState("All");
@@ -44,7 +45,7 @@ const FullBlog = () => {
       return titleMatch || descMatch || authorMatch;
     })
     .filter((blog) => blog.visibility !== 'private' && blog.approval !== false)
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const recentBlogs = filteredBlogs.slice(0, 1);
 
@@ -55,7 +56,7 @@ const FullBlog = () => {
         const response = await api.get('/api/blog/getBlog');
         if (response.status === 200) {
           const blogData = response.data.blogs || [];
-          let processedBlogs = [];
+          let processedBlogs: ListedBlog[] = [];
 
           if (typeof blogData === 'string') {
             try {
@@ -64,7 +65,7 @@ const FullBlog = () => {
               processedBlogs = [];
             }
           } else if (Array.isArray(blogData)) {
-            processedBlogs = blogData.map((blog) => ({
+            processedBlogs = blogData.map((blog: BlogPost): ListedBlog => ({
               id: blog.id || blog._id,
               title: blog.title || blog.blogTitle || 'Untitled Blog',
               desc: blog.desc || blog.metaDescription || blog.blogContent || '',
@@ -84,7 +85,7 @@ const FullBlog = () => {
           setBlogs(processedBlogs);
 
           // ✅ Extract departments dynamically
-          const uniqueDepts = new Set();
+          const uniqueDepts = new Set<string>();
           processedBlogs.forEach((blog) => {
             try {
               const authorObj = typeof blog.author === 'string' ? JSON.parse(blog.author) : blog.author;

@@ -6,7 +6,7 @@ import { AuthContextProvider } from "./AuthContext";
 import RecoveryContextProvider from "./RecoveryContext";
 import { GOOGLE_OAUTH_CLIENT_ID } from "../utils/googleOAuth";
 
-function CoreProviders({ children }) {
+function CoreProviders({ children }: { children: React.ReactNode }) {
   return (
     <AuthContextProvider>
       <RecoveryContextProvider>{children}</RecoveryContextProvider>
@@ -23,7 +23,7 @@ function CoreProviders({ children }) {
  * and <SpeedInsights /> are omitted here — they are injected by the hosting
  * platform for Next.js apps rather than mounted as components.
  */
-export default function Providers({ children }) {
+export default function Providers({ children }: { children: React.ReactNode }) {
   if (!GOOGLE_OAUTH_CLIENT_ID) {
     return <CoreProviders>{children}</CoreProviders>;
   }

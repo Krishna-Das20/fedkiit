@@ -1,17 +1,25 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import PropTypes from "prop-types";
 import { MdClose, MdGroups, MdPerson, MdEmail, MdSchool, MdCalendarToday } from "react-icons/md";
 import { FaCopy, FaCheck } from "react-icons/fa";
 import { api } from "../../../../services";
 import { Alert, MicroLoading } from "../../../../microInteraction";
 import styles from "./style/TeamDetailsModal.module.scss";
+import type { ApiError } from "@/src/types/api";
+import type { TeamDetails } from "@/src/types/team";
 
-const TeamDetailsModal = ({ isOpen, onClose, formId, eventTitle }) => {
-  const [teamDetails, setTeamDetails] = useState(null);
+type TeamDetailsModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  formId: string;
+  eventTitle?: string;
+};
+
+const TeamDetailsModal = ({ isOpen, onClose, formId, eventTitle }: TeamDetailsModalProps) => {
+  const [teamDetails, setTeamDetails] = useState<TeamDetails | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
 
   useEffect(() => {
@@ -51,7 +59,7 @@ const TeamDetailsModal = ({ isOpen, onClose, formId, eventTitle }) => {
     } catch (err) {
       console.error("Error fetching team details:", err);
       setError(
-        err.response?.data?.message || "Failed to fetch team details. Please try again."
+        (err as ApiError).response?.data?.message || "Failed to fetch team details. Please try again."
       );
     } finally {
       setIsLoading(false);
@@ -60,7 +68,8 @@ const TeamDetailsModal = ({ isOpen, onClose, formId, eventTitle }) => {
 
   const copyTeamCode = async () => {
     try {
-      await navigator.clipboard.writeText(teamDetails.teamCode);
+      // The copy button only renders once details have loaded.
+      await navigator.clipboard.writeText(teamDetails!.teamCode);
       setCopiedCode(true);
       setTimeout(() => setCopiedCode(false), 2000);
       
@@ -76,7 +85,7 @@ const TeamDetailsModal = ({ isOpen, onClose, formId, eventTitle }) => {
     }
   };
 
-  const handleBackdropClick = (e) => {
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       onClose();
     }
@@ -149,10 +158,11 @@ const TeamDetailsModal = ({ isOpen, onClose, formId, eventTitle }) => {
                 
                 <div className={styles.membersList}>
                   {teamDetails.members.map((member, index) => (
-                    <div key={member.id} className={styles.memberCard}>
+                    // Members carry no id; the email is unique within a team.
+                    <div key={member.email} className={styles.memberCard}>
                       <div className={styles.memberAvatar}>
                         {member.img ? (
-                          <img src={member.img} alt={member.name} />
+                          <img src={member.img} alt={member.name ?? undefined} />
                         ) : (
                           <div className={styles.avatarPlaceholder}>
                             {member.name?.charAt(0)?.toUpperCase() || "?"}
@@ -211,13 +221,6 @@ const TeamDetailsModal = ({ isOpen, onClose, formId, eventTitle }) => {
       </div>
     </div>
   );
-};
-
-TeamDetailsModal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  formId: PropTypes.string.isRequired,
-  eventTitle: PropTypes.string,
 };
 
 export default TeamDetailsModal;

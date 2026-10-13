@@ -14,11 +14,23 @@ import {
 import { Alert, MicroLoading } from "../../../../../microInteraction";
 import AuthContext from "../../../../../context/AuthContext";
 import styles from "./styles/SendCertificate.module.scss";
+import type { AlertProps } from "@/src/microInteraction/Alert/Alert";
+import type { ApiError } from "@/src/types/api";
+import type { CertificateField } from "@/src/types/certificate";
 
-const SendCertificate = ({ eventId: propEventId } = {}) => {
+/** A recipient read from the uploaded sheet. */
+type Attendee = { email: string; name: string };
+
+/** A recipient the send endpoint reported as undelivered. */
+type FailedDelivery = { email: string; error?: string };
+
+/** A sheet row; column names vary, so any key may hold the email or name. */
+type SheetRow = Record<string, unknown>;
+
+const SendCertificate = ({ eventId: propEventId }: { eventId?: string } = {}) => {
   const authCtx = useContext(AuthContext);
-  const params = useParams();
-  const fileInputRef = useRef(null);
+  const params = useParams<{ id?: string; eventId?: string; formId?: string }>();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const routeEventId = params?.id ?? params?.eventId ?? params?.formId;
   const eventId = propEventId || routeEventId;
@@ -26,23 +38,25 @@ const SendCertificate = ({ eventId: propEventId } = {}) => {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [sendingMail, setSendingMail] = useState(false);
   const [fileUploading, setFileUploading] = useState(false);
-  const [certificatePreview, setCertificatePreview] = useState(null);
-  const [fields, setFields] = useState([]);
-  const [templateAspectRatio, setTemplateAspectRatio] = useState(null);
+  // The template image as a data URL.
+  const [certificatePreview, setCertificatePreview] = useState<string | null>(null);
+  const [fields, setFields] = useState<CertificateField[]>([]);
+  const [templateAspectRatio, setTemplateAspectRatio] = useState<number | null>(null);
   const [canvasWidth, setCanvasWidth] = useState(800);
-  const canvasRef = useRef(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
 
-  const [attendees, setAttendees] = useState([]);
-  const [checkedAttendees, setCheckedAttendees] = useState([]);
+  const [attendees, setAttendees] = useState<Attendee[]>([]);
+  const [checkedAttendees, setCheckedAttendees] = useState<Attendee[]>([]);
   const [attendeeFilterText, setAttendeeFilterText] = useState("");
   const [checkedFilterText, setCheckedFilterText] = useState("");
 
   const [subject, setSubject] = useState("Certificate of Appreciation");
   const [body, setBody] = useState("");
-  const [mailFrequency, setMailFrequency] = useState(20);
+  // Text while the number input is being edited; read with Number().
+  const [mailFrequency, setMailFrequency] = useState<number | string>(20);
 
-  const [alert, setAlert] = useState(null);
-  const [failedEmails, setFailedEmails] = useState([]);
+  const [alert, setAlert] = useState<AlertProps | null>(null);
+  const [failedEmails, setFailedEmails] = useState<FailedDelivery[]>([]);
   const [deliveryError, setDeliveryError] = useState("");
   const [isFailedMinimized, setIsFailedMinimized] = useState(false);
 
@@ -117,7 +131,7 @@ const SendCertificate = ({ eventId: propEventId } = {}) => {
         setAlert({
           type: "error",
           message:
-            error.response?.data?.message ||
+            (error as ApiError).response?.data?.message ||
             "Failed to load certificate preview. Save a certificate template first.",
           position: "top-right",
           duration: 3000,
@@ -134,7 +148,7 @@ const SendCertificate = ({ eventId: propEventId } = {}) => {
   }, [eventId, authCtx.token]);
 
   // File Upload Handler (XLSX, XLS, CSV)
-  const handleFileUpload = async (event) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -163,11 +177,12 @@ const SendCertificate = ({ eventId: propEventId } = {}) => {
       const reader = new FileReader();
       reader.onload = async (e) => {
         try {
-          const data = new Uint8Array(e.target.result);
+          // readAsArrayBuffer below, so the result is an ArrayBuffer.
+          const data = new Uint8Array(e.target!.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: "array" });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+          const jsonData = XLSX.utils.sheet_to_json<SheetRow>(worksheet);
 
           const validRows = (jsonData || []).filter(
             (row) => row && typeof row === "object" && Object.keys(row).length > 0
@@ -177,7 +192,7 @@ const SendCertificate = ({ eventId: propEventId } = {}) => {
             throw new Error("Uploaded file is empty.");
           }
 
-          const extractedAttendees = [];
+          const extractedAttendees: Attendee[] = [];
           for (const row of validRows) {
             const email =
               row.email ||
@@ -231,7 +246,7 @@ const SendCertificate = ({ eventId: propEventId } = {}) => {
         } catch (parseError) {
           setAlert({
             type: "error",
-            message: parseError.message || "Failed to process file contents.",
+            message: (parseError as Error).message || "Failed to process file contents.",
             position: "top-right",
             duration: 3500,
           });
@@ -254,7 +269,7 @@ const SendCertificate = ({ eventId: propEventId } = {}) => {
     } catch (error) {
       setAlert({
         type: "error",
-        message: error.message || "Failed to process uploaded file.",
+        message: (error as Error).message || "Failed to process uploaded file.",
         position: "top-right",
         duration: 3000,
       });
@@ -263,7 +278,7 @@ const SendCertificate = ({ eventId: propEventId } = {}) => {
   };
 
   // Attendee Selection Handlers
-  const handleToggleAttendee = (attendee) => {
+  const handleToggleAttendee = (attendee: Attendee) => {
     setCheckedAttendees((prev) => {
       const exists = prev.some((a) => a.email.toLowerCase() === attendee.email.toLowerCase());
       if (exists) {
@@ -274,14 +289,14 @@ const SendCertificate = ({ eventId: propEventId } = {}) => {
     });
   };
 
-  const handleUncheckAttendee = (attendee) => {
+  const handleUncheckAttendee = (attendee: Attendee) => {
     setCheckedAttendees((prev) =>
       prev.filter((a) => a.email.toLowerCase() !== attendee.email.toLowerCase())
     );
   };
 
   // Filter lists
-  const filterByQuery = (list, filterText) => {
+  const filterByQuery = (list: Attendee[], filterText: string) => {
     const q = filterText.trim().toLowerCase();
     if (!q) return list;
     return list.filter(
@@ -404,7 +419,7 @@ const SendCertificate = ({ eventId: propEventId } = {}) => {
         );
       }
     } catch (error) {
-      const message = error.response?.data?.message || error.message;
+      const message = (error as ApiError).response?.data?.message || (error as Error).message;
       setDeliveryError(message);
       setAlert({
         type: "error",
@@ -460,7 +475,7 @@ const SendCertificate = ({ eventId: propEventId } = {}) => {
         name: attendee.name || "",
       }));
 
-      const allFailed = [];
+      const allFailed: FailedDelivery[] = [];
       let totalMailed = 0;
       const totalBatches = Math.ceil(allRecipients.length / CHUNK_SIZE);
 
@@ -489,7 +504,7 @@ const SendCertificate = ({ eventId: propEventId } = {}) => {
         if (response?.status === 200) {
           totalMailed += chunk.length;
         } else if (response?.status === 207) {
-          const failed = response.data?.failed || [];
+          const failed: FailedDelivery[] = response.data?.failed || [];
           allFailed.push(...failed);
           totalMailed += chunk.length - failed.length;
         } else {
@@ -518,7 +533,7 @@ const SendCertificate = ({ eventId: propEventId } = {}) => {
         });
       }
     } catch (error) {
-      const message = error.response?.data?.message || error.message;
+      const message = (error as ApiError).response?.data?.message || (error as Error).message;
       setDeliveryError(message);
       setAlert({
         type: "error",
@@ -612,8 +627,9 @@ const SendCertificate = ({ eventId: propEventId } = {}) => {
                       alt="Certificate Template Preview"
                       className={styles.previewTemplateImage}
                       onLoad={(e) => {
-                        if (e.target.naturalWidth && e.target.naturalHeight) {
-                          setTemplateAspectRatio(e.target.naturalWidth / e.target.naturalHeight);
+                        const img = e.currentTarget;
+                        if (img.naturalWidth && img.naturalHeight) {
+                          setTemplateAspectRatio(img.naturalWidth / img.naturalHeight);
                         }
                       }}
                     />
@@ -782,8 +798,9 @@ const SendCertificate = ({ eventId: propEventId } = {}) => {
                   accept=".xlsx,.xls,.csv"
                   onChange={handleFileUpload}
                   style={{ display: "none" }}
+                  // Cleared so picking the same file again still fires onChange.
                   onClick={(e) => {
-                    e.target.value = null;
+                    e.currentTarget.value = "";
                   }}
                 />
                 <button

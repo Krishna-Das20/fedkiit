@@ -10,16 +10,27 @@ import { parse, differenceInMilliseconds } from "date-fns";
 import { Alert, MicroLoading } from "../../../../microInteraction";
 import { useRouter } from "next/navigation";
 import { getEventSlug } from "../../../../utils/slug";
+import type { AlertProps } from "@/src/microInteraction/Alert/Alert";
+import type { EventInfo } from "@/lib/types/event";
+import type { FormRecord } from "@/src/types/form";
 
-function Hero({ ongoingEvents, isRegisteredInRelatedEvents, eventName }) {
+type HeroProps = {
+  ongoingEvents: FormRecord[];
+  isRegisteredInRelatedEvents: boolean;
+  /** Title of the event this page fronts. */
+  eventName?: string;
+};
+
+function Hero({ ongoingEvents, isRegisteredInRelatedEvents, eventName }: HeroProps) {
   const authCtx = useContext(AuthContext);
-  const [alert, setAlert] = useState(null);
-  const [remainingTime, setRemainingTime] = useState("");
-  const [info, setInfo] = useState({});
+  const [alert, setAlert] = useState<AlertProps | null>(null);
+  const [remainingTime, setRemainingTime] = useState<string | null>("");
+  // Undefined until the fronted event is among the ongoing ones.
+  const [info, setInfo] = useState<EventInfo | undefined>({});
   const [isRegistrationClosed, setIsRegistrationClosed] = useState(false);
   const router = useRouter();
   const [isMicroLoading, setIsMicroLoading] = useState(false);
-  const [relatedEventId, setRelatedEventId] = useState(null);
+  const [relatedEventId, setRelatedEventId] = useState<string | null | undefined>(null);
   const [btnTxt, setBtnTxt] = useState("REGISTER NOW");
 
   useEffect(() => {
@@ -32,15 +43,16 @@ function Hero({ ongoingEvents, isRegisteredInRelatedEvents, eventName }) {
 
   const calculateRemainingTime = () => {
     try {
+      // Without an event this throws into the catch below, as it always has.
       const regStartDate = parse(
-        info.regDateAndTime,
+        info!.regDateAndTime as string,
         "MMMM do yyyy, h:mm:ss a",
         new Date()
       );
 
       const now = new Date();
 
-      if (info.isRegistrationClosed) {
+      if (info!.isRegistrationClosed) {
         setRemainingTime(null);
         setIsRegistrationClosed(true);
         return;
@@ -117,7 +129,7 @@ function Hero({ ongoingEvents, isRegisteredInRelatedEvents, eventName }) {
         return;
       }
 
-      if (authCtx.user.regForm?.includes(relatedEventId)) {
+      if (authCtx.user.regForm?.includes(relatedEventId as string)) {
         setAlert({
           type: "info",
           message: "You have already registered for this event",
@@ -137,14 +149,14 @@ function Hero({ ongoingEvents, isRegisteredInRelatedEvents, eventName }) {
       setIsMicroLoading(true);
       setBtnTxt(
         isRegistrationClosed
-          ? authCtx.user?.regForm?.includes(relatedEventId)
+          ? authCtx.user?.regForm?.includes(relatedEventId as string)
             ? "ALREADY REGISTERED"
             : "REGISTRATION CLOSED"
           : !authCtx.isLoggedIn
           ? remainingTime || "REGISTER NOW"
           : authCtx.user.access !== "USER"
           ? "ALREADY MEMBER"
-          : authCtx.user?.regForm?.includes(relatedEventId)
+          : authCtx.user?.regForm?.includes(relatedEventId as string)
           ? "ALREADY REGISTERED"
           : remainingTime || "REGISTER NOW"
       );

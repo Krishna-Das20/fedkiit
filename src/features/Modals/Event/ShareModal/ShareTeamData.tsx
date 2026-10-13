@@ -1,6 +1,5 @@
 "use client";
 
-/* eslint-disable react/prop-types */
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
 import {
@@ -19,14 +18,20 @@ import JSConfetti from "js-confetti";
 
 // Constructed lazily rather than at module scope: JSConfetti touches `document`
 // in its constructor, which runs during server rendering under Next.js.
-let jsConfettiInstance = null;
+let jsConfettiInstance: JSConfetti | null = null;
 const getJsConfetti = () => {
   if (typeof document === "undefined") return null;
   jsConfettiInstance ??= new JSConfetti();
   return jsConfettiInstance;
 };
 
-const ShareTeamData = ({ onClose, teamData, successMessage }) => {
+type ShareTeamDataProps = {
+  onClose: () => void;
+  teamData: { teamName: string | null; teamCode: string | null };
+  successMessage: { successMessage: string | null };
+};
+
+const ShareTeamData = ({ onClose, teamData, successMessage }: ShareTeamDataProps) => {
   const { teamName, teamCode } = teamData;
   const [copyText, setCopyText] = useState("Copy");
 
@@ -99,9 +104,10 @@ const ShareTeamData = ({ onClose, teamData, successMessage }) => {
                 marginTop: "1rem",
               }}
             >
+              {/* react-share dropped Facebook's `quote` (Facebook ignores
+                  prefilled text), so only the hashtag is passed. */}
               <FacebookShareButton
                 url={websiteUrl}
-                quote={message}
                 hashtag="#TeamSuccess"
               >
                 <FacebookIcon size={40} round />
@@ -143,7 +149,7 @@ const ShareTeamData = ({ onClose, teamData, successMessage }) => {
                 marginBottom: "0",
               }}
             >
-              {successMessage.successMessage
+              {successMessage.successMessage!
                 .trim()
                 .split(/\s+/)
                 .map((word, index) => {

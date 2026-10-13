@@ -10,18 +10,29 @@ import { parse, differenceInMilliseconds } from "date-fns";
 import { Alert, MicroLoading } from "../../../../microInteraction"; // Ensure this import path is correct
 import { useRouter } from "next/navigation";
 import { getEventSlug } from "../../../../utils/slug";
+import type { AlertProps } from "@/src/microInteraction/Alert/Alert";
+import type { EventInfo } from "@/lib/types/event";
+import type { FormRecord } from "@/src/types/form";
 
-function Hero({ ongoingEvents, isRegisteredInRelatedEvents, eventName }) {
+type HeroProps = {
+  ongoingEvents: FormRecord[];
+  isRegisteredInRelatedEvents: boolean;
+  /** Title of the event this page fronts. */
+  eventName?: string;
+};
+
+function Hero({ ongoingEvents, isRegisteredInRelatedEvents, eventName }: HeroProps) {
   const authCtx = useContext(AuthContext);
-  const [alert, setAlert] = useState(null);
-  const [remainingTime, setRemainingTime] = useState("");
-  const [info, setInfo] = useState({});
+  const [alert, setAlert] = useState<AlertProps | null>(null);
+  const [remainingTime, setRemainingTime] = useState<string | null>("");
+  // Undefined until the fronted event is among the ongoing ones.
+  const [info, setInfo] = useState<EventInfo | undefined>({});
   const [isRegistrationClosed, setIsRegistrationClosed] = useState(false);
   const router = useRouter();
   const [shouldNavigate, setShouldNavigate] = useState(false);
   const [navigatePath, setNavigatePath] = useState("/");
   const [isMicroLoading, setIsMicroLoading] = useState(true);
-  const [relatedEventId, setRelatedEventId] = useState(null);
+  const [relatedEventId, setRelatedEventId] = useState<string | null | undefined>(null);
   const [btnTxt, setBtnTxt] = useState("REGISTER NOW");
 
   useEffect(() => {
@@ -167,7 +178,7 @@ function Hero({ ongoingEvents, isRegisteredInRelatedEvents, eventName }) {
             setBtnTxt("ALREADY MEMBER");
           }
         } else if (isRegisteredInRelatedEvents) {
-          if (authCtx.user.regForm.includes(relatedEventId)) {
+          if (authCtx.user.regForm.includes(relatedEventId as string)) {
             setIsMicroLoading(false);
             setBtnTxt("ALREADY REGISTERED");
           }

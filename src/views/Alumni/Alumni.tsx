@@ -6,14 +6,15 @@ import styles from "./styles/Alumni.module.scss";
 import { TeamCard } from "../../components";
 import useWindowWidth from "../../utils/hooks/useWindowWidth"; // Import useWindowWidth hook
 import { ComponentLoading } from "../../microInteraction";
+import type { Member } from "../../types/member";
 
 const Alumni = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  const [alumni, setAlumni] = useState([]);
-  const [Error, setError] = useState(null);
+  const [alumni, setAlumni] = useState<Member[]>([]);
+  const [Error, setError] = useState<{ message: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -23,7 +24,7 @@ const Alumni = () => {
 
         if (response.status === 200) {
           // Sort alumni alphabetically
-          const sortedAlumni = response.data.data.sort((a, b) =>
+          const sortedAlumni = response.data.data.sort((a: Member, b: Member) =>
             a.name.localeCompare(b.name)
           );
           setAlumni(sortedAlumni);
@@ -51,7 +52,7 @@ const Alumni = () => {
     fetchAlumni();
   }, []);
 
-  const AlumniSection = ({ alumni }) => {
+  const AlumniSection = ({ alumni }: { alumni: Member[] }) => {
     const windowWidth = useWindowWidth();
     const membersPerRow = windowWidth < 500 ? 2 : 4;
     const remainderMembersCount = alumni.length % membersPerRow;

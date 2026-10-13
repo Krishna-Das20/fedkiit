@@ -1,6 +1,5 @@
 "use client";
 
-import PropTypes from "prop-types";
 import Link from "next/link";
 import { X } from "lucide-react";
 import styles from "./styles/CloseButton.module.scss";
@@ -13,13 +12,21 @@ import styles from "./styles/CloseButton.module.scss";
  * `href` is set keeps that single appearance even where closing means
  * navigating away rather than unmounting a panel.
  */
+type CloseButtonProps = {
+  onClick?: () => void;
+  href?: string;
+  label?: string;
+  size?: "sm" | "md";
+  className?: string;
+};
+
 const CloseButton = ({
   onClick,
   href,
   label = "Close",
   size = "md",
   className = "",
-}) => {
+}: CloseButtonProps) => {
   const classes = `${styles.close} ${styles[size]} ${className}`.trim();
 
   if (href) {
@@ -40,14 +47,6 @@ const CloseButton = ({
       <X size={size === "sm" ? 16 : 18} aria-hidden="true" />
     </button>
   );
-};
-
-CloseButton.propTypes = {
-  onClick: PropTypes.func,
-  href: PropTypes.string,
-  label: PropTypes.string,
-  size: PropTypes.oneOf(["sm", "md"]),
-  className: PropTypes.string,
 };
 
 export default CloseButton;

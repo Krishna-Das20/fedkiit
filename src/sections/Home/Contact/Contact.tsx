@@ -7,9 +7,10 @@ import contactImg from "../../../assets/images/contact.png";
 import Button from "../../../components/Core/Button";
 import { AnimatedBox } from "../../../assets/animations/AnimatedBox";
 import { Alert, MicroLoading } from "../../../microInteraction";
+import type { AlertProps } from "@/src/microInteraction/Alert/Alert";
 
 const ContactForm = () => {
-  const [alert, setAlert] = useState(null);
+  const [alert, setAlert] = useState<AlertProps | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -19,11 +20,14 @@ const ContactForm = () => {
     }
   }, [alert]);
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
 
-    const formData = new FormData(event.target);
+    // `target`, not `currentTarget`: React clears currentTarget once the
+    // handler yields, and the form is reset again after the await below.
+    const form = event.target as HTMLFormElement;
+    const formData = new FormData(form);
     const data = {
       name: formData.get("name"),
       email: formData.get("email"),
@@ -41,7 +45,7 @@ const ContactForm = () => {
           position: "bottom-right",
           duration: 3000,
         });
-        event.target.reset();
+        form.reset();
       } else {
         setAlert({
           type: "error",

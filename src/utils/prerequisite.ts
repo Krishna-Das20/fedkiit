@@ -24,8 +24,10 @@
 
 const OBJECT_ID = /^[a-f\d]{24}$/i;
 
+type WithPrerequisite = { relatedEvent?: string | null } | null | undefined;
+
 /** True when the event names a real prerequisite event. */
-export function hasPrerequisite(info) {
+export function hasPrerequisite(info: WithPrerequisite) {
   const id = info?.relatedEvent;
   return Boolean(id && id !== "null" && OBJECT_ID.test(id));
 }
@@ -36,7 +38,11 @@ export function hasPrerequisite(info) {
  * @param {object} info      The event's `info` object.
  * @param {string[]} regForm Ids of the forms the visitor has registered for.
  */
-export function isPrerequisiteMet(info, regForm) {
+export function isPrerequisiteMet(
+  info: WithPrerequisite,
+  regForm: string[] | null | undefined,
+) {
   if (!hasPrerequisite(info)) return true;
-  return Array.isArray(regForm) && regForm.includes(info.relatedEvent);
+  // hasPrerequisite has just confirmed relatedEvent is a real id.
+  return Array.isArray(regForm) && regForm.includes(info!.relatedEvent!);
 }

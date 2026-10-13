@@ -4,7 +4,7 @@ import { useState, useEffect, useContext } from "react";
 
 import styles from "./style/Signup.module.scss";
 
-import { useGoogleLogin } from "@react-oauth/google";
+import { useGoogleLogin, type TokenResponse } from "@react-oauth/google";
 import AuthContext, { SESSION_TTL_MS } from "../../context/AuthContext";
 import google from "../../assets/images/google.png";
 import { MicroLoading } from "../../microInteraction";
@@ -12,9 +12,17 @@ import { api } from "../../services";
 import { useRouter } from "next/navigation";
 import postAuthRedirect from "../../utils/postAuthRedirect";
 import { isGoogleOAuthEnabled } from "../../utils/googleOAuth";
+import type { AlertProps } from "../../microInteraction/Alert/Alert";
 
-function GoogleSignupButton({ setAlert }) {
-  const [codeResponse, setCodeResponse] = useState(null);
+type GoogleSignupProps = {
+  setAlert: (alert: AlertProps | null) => void;
+};
+
+function GoogleSignupButton({ setAlert }: GoogleSignupProps) {
+  const [codeResponse, setCodeResponse] = useState<Omit<
+    TokenResponse,
+    "error" | "error_description" | "error_uri"
+  > | null>(null);
   const [shouldNavigate, setShouldNavigate] = useState(false);
   const [navigatePath, setNavigatePath] = useState("/");
   const authCtx = useContext(AuthContext);
@@ -44,7 +52,8 @@ function GoogleSignupButton({ setAlert }) {
     try {
       try {
         const response = await api.post("/api/auth/googleAuth", {
-          access_token: codeResponse.access_token,
+          // Only called from the effect once a response has arrived.
+          access_token: codeResponse!.access_token,
         });
 
         if (response.status === 200 || response.status === 201) {
@@ -140,7 +149,7 @@ function GoogleSignupButton({ setAlert }) {
   );
 }
 
-export default function GoogleSignup({ setAlert }) {
+export default function GoogleSignup({ setAlert }: GoogleSignupProps) {
   if (!isGoogleOAuthEnabled()) {
     return null;
   }

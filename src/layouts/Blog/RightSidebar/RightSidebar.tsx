@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from "react";
 import styles from "./styles/RightSidebar.module.scss";
 import { FaExternalLinkAlt } from 'react-icons/fa';
+import type { BlogAuthor, BlogPost } from '../../../types/blog';
 
-const RightSidebar = ({ blogs }) => {
+const RightSidebar = ({ blogs }: { blogs: BlogPost[] }) => {
   const displayedBlogs = blogs.slice(0, 8);
 
   return (
@@ -16,7 +17,7 @@ const RightSidebar = ({ blogs }) => {
         {displayedBlogs.length > 0 ? (
           displayedBlogs.map((blog) => {
             // Parse author information safely - similar to BlogCard implementation
-            let parsedAuthor = { name: "Unknown", department: "N/A" };
+            let parsedAuthor: Partial<BlogAuthor> = { name: "Unknown", department: "N/A" };
             
             try {
               if (typeof blog.author === 'string') {

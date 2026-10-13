@@ -1,6 +1,5 @@
 "use client";
 
-import PropTypes from 'prop-types';
 import dynamic from 'next/dynamic';
 import useDimensions from '../../utils/hooks/useDimensions';
 import AnimatedBox from '../../assets/animations/socialPageAnimation';
@@ -35,7 +34,15 @@ const LinkedInEmbed = dynamic(
   { ssr: false },
 );
 
-const SocialEmbed = ({ type }) => {
+type SocialEmbedProps = {
+  type:
+    | 'instagramTopPost'
+    | 'instagramBottomPost'
+    | 'instagramReel'
+    | 'linkedInPost';
+};
+
+const SocialEmbed = ({ type }: SocialEmbedProps) => {
   const {
     calculateInstagramWidth,
     calculateInstagramHeight,
@@ -45,7 +52,10 @@ const SocialEmbed = ({ type }) => {
     calculateLinkedInHeight
   } = useDimensions();
 
-  let url, postUrl, width, height;
+  let url: string;
+  let postUrl: string | undefined;
+  let width: number;
+  let height: number;
 
   switch (type) {
     case 'instagramTopPost':
@@ -82,15 +92,6 @@ const SocialEmbed = ({ type }) => {
       )}
     </AnimatedBox>
   );
-};
-
-SocialEmbed.propTypes = {
-  type: PropTypes.oneOf([
-    'instagramTopPost',
-    'instagramBottomPost',
-    'instagramReel',
-    'linkedInPost',
-  ]).isRequired,
 };
 
 export default SocialEmbed;

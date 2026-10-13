@@ -1,11 +1,13 @@
 "use client";
 
 import React from "react";
-import PropTypes from "prop-types";
 import ReactMarkdown from "react-markdown";
 import styles from "./styles/MarkdownContent.module.scss";
 
-function LinkRenderer({ href, children }) {
+function LinkRenderer({
+  href,
+  children,
+}: React.AnchorHTMLAttributes<HTMLAnchorElement>) {
   return (
     <a href={href} target="_blank" rel="noopener noreferrer">
       {children}
@@ -13,15 +15,17 @@ function LinkRenderer({ href, children }) {
   );
 }
 
-LinkRenderer.propTypes = {
-  href: PropTypes.string,
-  children: PropTypes.node,
-};
-
 /**
  * Renders event descriptions stored as Markdown.
  */
-export default function MarkdownContent({ children, className = "" }) {
+export default function MarkdownContent({
+  children,
+  className = "",
+}: {
+  // Only a string is rendered; anything else renders nothing.
+  children?: React.ReactNode;
+  className?: string;
+}) {
   const source = typeof children === "string" ? children : "";
   if (!source.trim()) return null;
 
@@ -37,8 +41,3 @@ export default function MarkdownContent({ children, className = "" }) {
     </div>
   );
 }
-
-MarkdownContent.propTypes = {
-  children: PropTypes.string,
-  className: PropTypes.string,
-};

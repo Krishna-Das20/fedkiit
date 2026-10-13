@@ -11,8 +11,13 @@ import Disclosure from "./components/Disclosure";
 import { RecoveryContext } from "../../context/RecoveryContext";
 import ShareTeamData from "../../features/Modals/Event/ShareModal/ShareTeamData";
 import Link from "next/link";
+import type { FormRecord } from "../../types/form";
 
 const PAST_PREVIEW_COUNT = 4;
+
+/** Event dates are stored as text; Date parses whatever the admin typed. */
+const eventTime = (event: FormRecord) =>
+  new Date(event.info.eventDate as string);
 
 const Event = () => {
   useEffect(() => {
@@ -20,11 +25,11 @@ const Event = () => {
   }, []);
 
   const authCtx = useContext(AuthContext);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<{ message: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isOpen, setOpenModal] = useState(false);
-  const [pastEvents, setPastEvents] = useState([]);
-  const [ongoingEvents, setOngoingEvents] = useState([]);
+  const [pastEvents, setPastEvents] = useState<FormRecord[]>([]);
+  const [ongoingEvents, setOngoingEvents] = useState<FormRecord[]>([]);
   const recoveryCtx = useContext(RecoveryContext);
   const [eventName, setEventName] = useState("");
   // A count, not a list — it was initialised to [], so `=== 0` was false until
@@ -47,12 +52,13 @@ const Event = () => {
       try {
         const response = await api.get("/api/form/getAllForms");
         if (response.status === 200) {
-          const fetchedEvents = response.data.events;
+          const fetchedEvents: FormRecord[] = response.data.events;
           const sortedEvents = fetchedEvents.sort((a, b) => {
-            const priorityA = parseInt(a.info.eventPriority, 10);
-            const priorityB = parseInt(b.info.eventPriority, 10);
-            const dateA = new Date(a.info.eventDate);
-            const dateB = new Date(b.info.eventDate);
+            // parseInt stringifies its argument anyway; String() says so.
+            const priorityA = parseInt(String(a.info.eventPriority), 10);
+            const priorityB = parseInt(String(b.info.eventPriority), 10);
+            const dateA = eventTime(a);
+            const dateB = eventTime(b);
             const titleA = a.info.eventTitle || "";
             const titleB = b.info.eventTitle || "";
 
@@ -75,7 +81,7 @@ const Event = () => {
           );
           const past = sortedEvents.filter((event) => event.info.isEventPast);
           const sortedPastEvents = past.sort((a, b) => {
-            return new Date(b.info.eventDate) - new Date(a.info.eventDate);
+            return eventTime(b).getTime() - eventTime(a).getTime();
           });
 
           setOngoingEvents(ongoing);
@@ -121,7 +127,7 @@ const Event = () => {
   // told people to go and register for "Form test" when the event actually
   // required Omega4.0, which is worse than saying nothing.
   const prerequisiteTitleOf = useCallback(
-    (event) => {
+    (event: FormRecord | undefined) => {
       const id = event?.info?.relatedEvent;
       if (!id || id === "null") return "";
       const all = [...ongoingEvents, ...pastEvents];
@@ -171,8 +177,8 @@ const Event = () => {
   // spotlight picks the soonest event that is genuinely still ahead of us and
   // only falls back to the priority order when nothing upcoming is left.
   const upcoming = openEvents
-    .filter((event) => new Date(event.info.eventDate).getTime() >= Date.now())
-    .sort((a, b) => new Date(a.info.eventDate) - new Date(b.info.eventDate));
+    .filter((event) => eventTime(event).getTime() >= Date.now())
+    .sort((a, b) => eventTime(a).getTime() - eventTime(b).getTime());
 
   const spotlight = upcoming[0] || openEvents[0];
   const remainingOpen = openEvents.filter((event) => event.id !== spotlight?.id);
@@ -181,8 +187,8 @@ const Event = () => {
   // that a bare date never does.
   const countdown = (() => {
     if (!upcoming[0]) return null;
-    const start = new Date(upcoming[0].info.eventDate);
-    const midnight = (d) =>
+    const start = eventTime(upcoming[0]);
+    const midnight = (d: Date) =>
       new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
     const days = Math.round(
       (midnight(start) - midnight(new Date())) / 86400000

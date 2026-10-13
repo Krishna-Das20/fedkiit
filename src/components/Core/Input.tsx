@@ -1,16 +1,33 @@
 "use client";
 
-import { forwardRef, useRef, useState } from "react";
-import PropTypes from "prop-types";
+import {
+  forwardRef,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type CSSProperties,
+  type MouseEvent,
+  type MouseEventHandler,
+} from "react";
 import { FaRegCalendarAlt } from "react-icons/fa";
-import Select, { components } from "react-select";
-import DatePicker from "react-date-picker";
+import Select, {
+  components,
+  type DropdownIndicatorProps,
+  type StylesConfig,
+} from "react-select";
+import DatePicker, { type DatePickerProps } from "react-date-picker";
 import { AiOutlineDown } from "react-icons/ai";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import DatePickerWithTime from "react-datepicker";
 import styles from "./styles/Core.module.scss";
 
-const CustomInput = forwardRef(
+type CustomInputProps = {
+  value?: string;
+  onClick?: MouseEventHandler<HTMLDivElement>;
+  placeholder?: string;
+};
+
+const CustomInput = forwardRef<HTMLDivElement, CustomInputProps>(
   ({ value, onClick, placeholder = "Select Date & Time" }, ref) => (
     <div
       onClick={onClick}
@@ -47,13 +64,53 @@ const CustomInput = forwardRef(
 
 CustomInput.displayName = "CustomInput";
 
-CustomInput.propTypes = {
-  value: PropTypes.string,
-  onClick: PropTypes.func.isRequired,
-  placeholder: PropTypes.string,
+export type SelectOption = {
+  value: string;
+  label: string;
 };
 
-const customStyles = {
+type ChangeFor<T extends string> = T extends "select"
+  ? SelectOption["value"]
+  : T extends "date"
+    ? Parameters<NonNullable<DatePickerProps["onChange"]>>[0]
+    : T extends "datetime-local"
+      ? Date | null
+      : T extends "file" | "image"
+        ? { target: { value: File } }
+        : ChangeEvent<HTMLInputElement & HTMLTextAreaElement>;
+
+/**
+ * What `onChange` receives for each `type`. When the type is only known at
+ * runtime (a plain `string`), it can be any of them.
+ */
+export type InputChange<T extends string> = string extends T
+  ? ChangeFor<"select" | "date" | "datetime-local" | "file" | "text">
+  : ChangeFor<T>;
+
+export type InputValue = string | number | Date | null | undefined;
+
+export type InputProps<T extends string = "text"> = {
+  type?: T;
+  containerStyle?: CSSProperties;
+  style?: CSSProperties;
+  placeholder?: string;
+  value?: InputValue;
+  onChange: (change: InputChange<T>) => void;
+  label?: string;
+  options?: SelectOption[];
+  name?: string;
+  showLabel?: boolean;
+  className?: string;
+  containerClassName?: string;
+  id?: string;
+  maxLength?: number;
+  max?: number | string;
+  onClick?: (event: MouseEvent<HTMLElement>) => void;
+  // Anything else is forwarded untouched to the underlying control.
+  [key: string]: unknown;
+};
+
+const customStyles: StylesConfig<SelectOption, false> = {
   control: (provided) => ({
     ...provided,
     display: "flex",
@@ -121,7 +178,7 @@ const customStyles = {
   }),
 };
 
-const DropdownIndicator = (props) => {
+const DropdownIndicator = (props: DropdownIndicatorProps<SelectOption, false>) => {
   return (
     <components.DropdownIndicator {...props}>
       <AiOutlineDown
@@ -137,7 +194,7 @@ const DropdownIndicator = (props) => {
   );
 };
 
-const Input = (props) => {
+function Input<T extends string = "text">(props: InputProps<T>) {
   const {
     type = "text",
     containerStyle,
@@ -156,20 +213,26 @@ const Input = (props) => {
     containerClassName = "",
     ...rest
   } = props;
+  // The public signature narrows the argument per `type`; each branch below
+  // hands over exactly what its `type` produces, so it is called untyped here.
+  const emitChange = onChange as (change: unknown) => void;
   const dateRef = useRef(null);
-  const fileRef = useRef(null);
-  const imgRef = useRef(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const imgRef = useRef<HTMLInputElement>(null);
   const [showPassword, setshowPassword] = useState(false);
-  const [previewFile, setpreviewFile] = useState(null);
+  const [previewFile, setpreviewFile] = useState<string | null>(null);
 
   // When callers pass only `onChange` (no `value`), keep the field uncontrolled.
   // Defaulting `value` to "" used to force every input controlled at "" — typing
   // never appeared because React kept resetting the DOM value.
   const isControlled = Object.prototype.hasOwnProperty.call(props, "value");
   const controlledValue = isControlled ? (value ?? "") : undefined;
-  const valueProps = isControlled ? { value: controlledValue } : {};
+  // A controlled text-like field only ever holds a string or number.
+  const valueProps = isControlled
+    ? { value: controlledValue as string | number }
+    : {};
 
-  const filterPassedTime = (time) => {
+  const filterPassedTime = (time: Date) => {
     const currentDate = new Date();
     const selectedDate = new Date(time);
 
@@ -187,7 +250,7 @@ const Input = (props) => {
             style={style || {}}
             placeholder={placeholder}
             {...valueProps}
-            onChange={onChange}
+            onChange={emitChange}
             {...rest}
           />
         );
@@ -201,7 +264,7 @@ const Input = (props) => {
             style={style || {}}
             placeholder={placeholder}
             {...valueProps}
-            onChange={onChange}
+            onChange={emitChange}
             {...rest}
           />
         );
@@ -211,11 +274,10 @@ const Input = (props) => {
           <textarea
             name={name}
             className={`${styles.input} ${styles.inputTxtArea} ${className}`}
-            type={type}
             style={style || {}}
             placeholder={placeholder}
             {...valueProps}
-            onChange={onChange}
+            onChange={emitChange}
             {...rest}
           />
         );
@@ -228,33 +290,34 @@ const Input = (props) => {
               placeholder={placeholder}
               value={
                 isControlled
-                  ? options.find((option) => option.value === value) || null
+                  ? options!.find((option) => option.value === value) || null
                   : undefined
               }
               options={options}
-              onChange={(selectedOption) => onChange(selectedOption.value)}
+              onChange={(selectedOption) => emitChange(selectedOption!.value)}
               styles={customStyles}
               components={{ DropdownIndicator }}
               isSearchable={false}
               className={className}
-              menuPosition="auto"
+              // react-select only distinguishes "fixed"; the "auto" this
+              // passed before was handled exactly like the "absolute" default.
+              menuPosition="absolute"
               {...rest}
             />
           </div>
         );
 
       case "date":
+        // react-date-picker ignores ref, placeholder and style (only its own
+        // props and event handlers are read), so none are passed to it.
         return (
           <div>
             <DatePicker
               name={name}
               className={`${styles.input} ${styles.inputDate} ${className}`}
-              ref={dateRef}
-              placeholder={placeholder}
-              value={value}
-              onChange={onChange}
+              value={value as DatePickerProps["value"]}
+              onChange={emitChange}
               clearIcon={null}
-              style={style || {}}
               calendarIcon={
                 <FaRegCalendarAlt
                   color="#fff"
@@ -276,9 +339,10 @@ const Input = (props) => {
             <DatePickerWithTime
               name={name}
               ref={dateRef}
-              value={value}
-              onChange={onChange}
-              clearIcon={null}
+              value={value as string | undefined}
+              onChange={emitChange}
+              // react-datepicker has no clearIcon prop (that is
+              // react-date-picker's), so it is not passed here.
               showTimeSelect
               filterTime={filterPassedTime}
               timeFormat="HH:mm"
@@ -298,8 +362,8 @@ const Input = (props) => {
               className={styles.checkboxInput}
               type="radio"
               placeholder={placeholder}
-              value={value}
-              onChange={onChange}
+              value={value as string | number | undefined}
+              onChange={emitChange}
               id={rest.id || `${name}-${value}`}
               {...rest}
             />
@@ -319,8 +383,8 @@ const Input = (props) => {
               className={styles.checkboxInput}
               type="checkbox"
               placeholder={placeholder}
-              value={value}
-              onChange={onChange}
+              value={value as string | number | undefined}
+              onChange={emitChange}
               id={rest.id || `${name}-${value}`}
               {...rest}
             />
@@ -350,7 +414,7 @@ const Input = (props) => {
                 style={style || {}}
                 placeholder={placeholder}
                 {...valueProps}
-                onChange={onChange}
+                onChange={emitChange}
                 {...rest}
               />
               {showPassword ? (
@@ -406,11 +470,11 @@ const Input = (props) => {
               onChange={() => {
                 const e = {
                   target: {
-                    value: fileRef.current.files[0],
+                    value: fileRef.current!.files![0],
                   },
                 };
-                setpreviewFile(URL.createObjectURL(fileRef.current.files[0]));
-                onChange(e);
+                setpreviewFile(URL.createObjectURL(fileRef.current!.files![0]));
+                emitChange(e);
               }}
               {...rest}
             />
@@ -433,7 +497,7 @@ const Input = (props) => {
                 overflow: "hidden",
               }}
             >
-              {value || "No file selected"}
+              {(value as string | undefined) || "No file selected"}
             </span>
           </div>
         );
@@ -465,11 +529,11 @@ const Input = (props) => {
               onChange={() => {
                 const e = {
                   target: {
-                    value: imgRef.current.files[0],
+                    value: imgRef.current!.files![0],
                   },
                 };
-                setpreviewFile(URL.createObjectURL(imgRef.current.files[0]));
-                onChange(e);
+                setpreviewFile(URL.createObjectURL(imgRef.current!.files![0]));
+                emitChange(e);
               }}
               {...rest}
             />
@@ -492,7 +556,7 @@ const Input = (props) => {
                 overflow: "hidden",
               }}
             >
-              {value || "No images selected"}
+              {(value as string | undefined) || "No images selected"}
             </span>
           </div>
         );
@@ -505,7 +569,7 @@ const Input = (props) => {
             style={style || {}}
             placeholder={placeholder}
             {...valueProps}
-            onChange={onChange}
+            onChange={emitChange}
             {...rest}
           />
         );
@@ -537,40 +601,6 @@ const Input = (props) => {
       {getInputTypes()}
     </div>
   );
-};
-
-Input.propTypes = {
-  type: PropTypes.oneOf([
-    "text",
-    "number",
-    "textarea",
-    "select",
-    "date",
-    "datetime-local",
-    "radio",
-    "checkbox",
-    "password",
-  ]),
-  containerStyle: PropTypes.object,
-  style: PropTypes.object,
-  placeholder: PropTypes.string,
-  value: PropTypes.oneOfType([
-    PropTypes.string,
-    PropTypes.number,
-    PropTypes.bool,
-  ]),
-  onChange: PropTypes.func.isRequired,
-  label: PropTypes.string,
-  options: PropTypes.arrayOf(
-    PropTypes.shape({
-      value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-      label: PropTypes.string,
-    })
-  ),
-  name: PropTypes.string,
-  showLabel: PropTypes.bool,
-  className: PropTypes.string,
-  containerClassName: PropTypes.string,
-};
+}
 
 export default Input;

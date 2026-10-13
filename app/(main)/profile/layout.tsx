@@ -22,6 +22,8 @@ import style from "@/src/views/Profile/styles/Profile.module.scss";
  */
 export default function ProfileShell({
   children,
+}: {
+  children: React.ReactNode;
 }) {
   const [activePage, setActivePage] = useState("Profile");
   const authCtx = useContext(AuthContext);

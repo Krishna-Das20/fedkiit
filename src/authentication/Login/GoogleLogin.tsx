@@ -3,7 +3,7 @@
 import { useContext, useState, useEffect } from "react";
 
 import style from "../SignUp/style/Signup.module.scss";
-import { useGoogleLogin } from "@react-oauth/google";
+import { useGoogleLogin, type TokenResponse } from "@react-oauth/google";
 import AuthContext, { SESSION_TTL_MS } from "../../context/AuthContext";
 import google from "../../assets/images/google.png";
 import { Alert, MicroLoading } from "../../microInteraction";
@@ -11,10 +11,14 @@ import { api } from "../../services";
 import { useRouter } from "next/navigation";
 import postAuthRedirect from "../../utils/postAuthRedirect";
 import { isGoogleOAuthEnabled } from "../../utils/googleOAuth";
+import type { AlertProps } from "@/src/microInteraction/Alert/Alert";
 
 function GoogleLoginButton() {
-  const [alert, setAlert] = useState(null);
-  const [codeResponse, setCodeResponse] = useState(null);
+  const [alert, setAlert] = useState<AlertProps | null>(null);
+  const [codeResponse, setCodeResponse] = useState<Omit<
+    TokenResponse,
+    "error" | "error_description" | "error_uri"
+  > | null>(null);
   const [shouldNavigate, setShouldNavigate] = useState(false);
   const [navigatePath, setNavigatePath] = useState("/");
   const authCtx = useContext(AuthContext);
@@ -52,7 +56,8 @@ function GoogleLoginButton() {
     try {
       try {
         const response = await api.post("/api/auth/googleAuth", {
-          access_token: codeResponse.access_token,
+          // Only called from the effect once a response has arrived.
+          access_token: codeResponse!.access_token,
         });
 
         if (response.status === 200 || response.status === 201) {

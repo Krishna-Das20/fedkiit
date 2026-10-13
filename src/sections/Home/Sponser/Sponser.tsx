@@ -4,7 +4,9 @@ import React, { useState, useRef, useEffect } from "react";
 import SponserImg from "../../../data/Sponser.json";
 import styles from "./styles/Sponser.module.scss";
 
-const SponserCard = ({ image }) => {
+type SponsorLogo = { image: string; title?: string };
+
+const SponserCard = ({ image }: { image: SponsorLogo }) => {
   const [loaded, setLoaded] = useState(false);
 
   return (
@@ -22,7 +24,7 @@ const SponserCard = ({ image }) => {
 };
 
 const Sponser = () => {
-  const trackRef = useRef(null);
+  const trackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = trackRef.current;

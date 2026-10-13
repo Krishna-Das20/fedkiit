@@ -1,11 +1,10 @@
 "use client";
 
-/* eslint-disable react/prop-types */
 /* eslint-disable no-unused-vars */
 import { motion } from 'framer-motion';
 import style from "./styles/Attend.module.scss";
 
-function Card({ img, title }) {
+function Card({ img, title }: { img: string; title: string }) {
   return (
     <motion.div
       className={style.card}

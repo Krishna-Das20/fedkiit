@@ -7,11 +7,17 @@ import AuthContext from "../../../../context/AuthContext";
 import { RecoveryContext } from "../../../../context/RecoveryContext";
 import { api } from "../../../../services";
 import style from "./styles/QRCodeModal.module.scss";
+import type { ApiError } from "../../../../types/api";
 
-const QRCodeModal = ({ onClose, eventId }) => {
-  const [qrCodeData, setQrCodeData] = useState(null);
+type QRCodeModalProps = {
+  onClose: () => void;
+  eventId: string;
+};
+
+const QRCodeModal = ({ onClose, eventId }: QRCodeModalProps) => {
+  const [qrCodeData, setQrCodeData] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [expiresHint, setExpiresHint] = useState("");
   const authCtx = useContext(AuthContext);
   const recoveryCtx = useContext(RecoveryContext);
@@ -39,8 +45,8 @@ const QRCodeModal = ({ onClose, eventId }) => {
         throw new Error("Failed to fetch attendance code");
       }
     } catch (err) {
-      const message = err?.response?.data?.message;
-      const code = err?.response?.data?.errors?.[0]?.code;
+      const message = (err as ApiError)?.response?.data?.message;
+      const code = (err as ApiError)?.response?.data?.errors?.[0]?.code;
 
       if (code === "BATCH_QR_BLOCKED") {
         setError(message || "Attendance QR is not available for your registration.");
@@ -48,9 +54,9 @@ const QRCodeModal = ({ onClose, eventId }) => {
       } else if (code === "ALREADY_MARKED" || message?.toLowerCase().includes("already marked")) {
         setError("You are already checked in for this event.");
         setQrCodeData(null);
-      } else if (err?.response?.status === 401) {
+      } else if ((err as ApiError)?.response?.status === 401) {
         setError("Please log in again to show your QR code.");
-      } else if (err?.response?.status === 403) {
+      } else if ((err as ApiError)?.response?.status === 403) {
         setError(message || "You are not registered for this event.");
       } else {
         setError(message || "Failed to generate QR code. Please try again.");

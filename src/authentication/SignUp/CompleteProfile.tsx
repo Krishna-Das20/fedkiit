@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useContext, useEffect } from "react";
-import PropTypes from "prop-types";
 
 import Input from "../../components/Core/Input";
 import Button from "../../components/Core/Button";
@@ -14,12 +13,13 @@ import { api } from "../../services";
 import { useRouter, usePathname } from "next/navigation";
 import postAuthRedirect from "../../utils/postAuthRedirect";
 import { YEAR_OPTIONS } from "../../data/yearOptions";
+import type { AlertProps } from "@/src/microInteraction/Alert/Alert";
 
 function CompleteProfile() {
   const [loadingEffect, setLoad] = useState(false);
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [alert, setAlert] = useState(null);
+  const [alert, setAlert] = useState<AlertProps | null>(null);
   const [year, setYear] = useState("");
   const [showUser, setUser] = useState({
     email: "",
@@ -30,16 +30,21 @@ function CompleteProfile() {
     contactNo: "",
     img: "",
   });
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const authCtx = useContext(AuthContext);
-  const location = { pathname: usePathname() };
+  // React Router passed the Google profile through `location.state`. Next has
+  // no route state, so `state` is always absent here and userData is {}.
+  const location: {
+    pathname: string;
+    state?: { data?: { name?: string; email?: string; picture?: string } };
+  } = { pathname: usePathname() };
 
   const userData = location.state?.data || {};
   const { name = "", email = "", picture: img = "" } = userData;
 
   const validate = () => {
-    const newErrors = {};
+    const newErrors: Record<string, string> = {};
     if (!showUser.rollNumber) newErrors.rollNumber = "Roll Number is required";
     if (!showUser.school) newErrors.school = "School is required";
     if (!showUser.college) newErrors.college = "college is required";
@@ -66,7 +71,7 @@ function CompleteProfile() {
     }
   }, [alert]);
 
-  const handleCreateProfile = async (e) => {
+  const handleCreateProfile = async (e: React.FormEvent | React.MouseEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
@@ -107,18 +112,22 @@ function CompleteProfile() {
             userObject.college,
             userObject.contactNo,
             userObject.year,
-            userObject.github,
-            userObject.linkedin,
-            userObject.designation,
+            // The registration payload has no links, designation, count,
+            // registrations or blurhash, so these were all undefined. They
+            // start from the same blanks as a signed-out session instead,
+            // which also gives regForm the array its readers expect.
+            "",
+            "",
+            "",
             // `access` is the 12th argument, not the 13th. These four were off
             // by one against the signature, so `regForm` landed in `access` —
             // leaving every account created here with a role that matches no
             // entry in any role list, which is how a member could lose a
             // permission their database record still granted them.
             "USER",
-            userObject.editProfileCount,
-            userObject.regForm,
-            userObject.blurhash || "",
+            "",
+            [],
+            "",
             "someToken",
             SESSION_TTL_MS
           );
@@ -264,10 +273,5 @@ function CompleteProfile() {
     </div>
   );
 }
-
-CompleteProfile.propTypes = {
-  data: PropTypes.object,
-  set: PropTypes.func,
-};
 
 export default CompleteProfile;

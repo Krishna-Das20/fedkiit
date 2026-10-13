@@ -16,6 +16,6 @@
  * their markup twice (once inside the streamed boundary, once outside). Pages
  * that read search params declare their own boundary.
  */
-export default function AuthLayout({ children }) {
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return <div className="authpage">{children}</div>;
 }

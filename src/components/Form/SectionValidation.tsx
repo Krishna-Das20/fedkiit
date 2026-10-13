@@ -5,6 +5,22 @@ import styles from "./styles/Form.module.scss";
 import Input from "../Core/Input";
 import { MdOutlineClose } from "react-icons/md";
 import { Text } from "../Core";
+import type { FormFieldDef, FormSection, SectionRule } from "../../types/form";
+
+type SectionValidationProps = {
+  handleClose: () => void;
+  section: FormSection;
+  sections: FormSection[];
+  fields: FormFieldDef[];
+  /** Auto-generated sections (the payment step) a redirect may also target. */
+  meta?: FormSection[];
+  onChangeValidation: (
+    value: string,
+    property: keyof SectionRule,
+    ruleId?: string,
+  ) => void;
+  onRemoveValidation: (ruleId: string) => void;
+};
 
 const SectionValidation = ({
   handleClose,
@@ -14,9 +30,9 @@ const SectionValidation = ({
   meta,
   onChangeValidation,
   onRemoveValidation,
-}) => {
-  const wrapperRef = useRef(null);
-  const scrollRef = useRef(null);
+}: SectionValidationProps) => {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   // The section's first validation has no field: it is where the section
   // goes when no answer rule below matches (or when it has none).
   const defaultRule = section.validations?.[0];
@@ -28,9 +44,9 @@ const SectionValidation = ({
     };
   });
 
-  const handleClickOutside = (e) => {
+  const handleClickOutside = (e: MouseEvent) => {
     const { current: wrap } = wrapperRef;
-    if (wrap && !wrap.contains(e.target)) {
+    if (wrap && !wrap.contains(e.target as Node)) {
       handleClose();
     }
   };
@@ -55,7 +71,7 @@ const SectionValidation = ({
           }))
         : [];
 
-    return [...options, ...metaOptions] || [];
+    return [...options, ...metaOptions];
   };
 
   return (

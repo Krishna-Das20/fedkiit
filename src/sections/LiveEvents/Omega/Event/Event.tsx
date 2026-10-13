@@ -1,6 +1,5 @@
 "use client";
 
-/* eslint-disable react/prop-types */
 import React, { useEffect, useState, useContext } from "react";
 import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
@@ -11,8 +10,16 @@ import styles from "./styles/Event.module.scss";
 import { Alert, MicroLoading } from "../../../../microInteraction"; // Ensure this import path is correct
 import { useRouter } from "next/navigation";
 import { getEventSlug } from "../../../../utils/slug";
+import type { AlertProps } from "@/src/microInteraction/Alert/Alert";
+import type { FormRecord } from "@/src/types/form";
 
-function EventCard({ data, isRegisteredInRelatedEvents, ongoingEvents }) {
+type OmegaEventCardProps = {
+  data: FormRecord;
+  isRegisteredInRelatedEvents: boolean;
+  ongoingEvents?: FormRecord[];
+};
+
+function EventCard({ data, isRegisteredInRelatedEvents, ongoingEvents }: OmegaEventCardProps) {
   const authCtx = useContext(AuthContext);
   const { ref, inView } = useInView({
     threshold: 0.1,
@@ -22,8 +29,8 @@ function EventCard({ data, isRegisteredInRelatedEvents, ongoingEvents }) {
 
   const [btnTxt, setBtnTxt] = useState("Register Now");
   const [isMicroLoading, setIsMicroLoading] = useState(false);
-  const [remainingTime, setRemainingTime] = useState(null);
-  const [alert, setAlert] = useState(null);
+  const [remainingTime, setRemainingTime] = useState<string | null>(null);
+  const [alert, setAlert] = useState<AlertProps | null>(null);
 
   useEffect(() => {
     if (alert) {
@@ -43,7 +50,7 @@ function EventCard({ data, isRegisteredInRelatedEvents, ongoingEvents }) {
   const calculateRemainingTime = () => {
     // Parse the regDateAndTime received from backend
     const regStartDate = parse(
-      data.info.regDateAndTime,
+      data.info.regDateAndTime as string,
       "MMMM do yyyy, h:mm:ss a",
       new Date()
     );
@@ -198,7 +205,7 @@ function EventCard({ data, isRegisteredInRelatedEvents, ongoingEvents }) {
     >
       <div></div>
       <div className={styles.card_img}>
-        <img src={data.info.eventImg} alt="Event" />
+        <img src={data.info.eventImg ?? undefined} alt="Event" />
       </div>
       <div className={styles.card_content}>
         <h2>{data.info.eventTitle}</h2>
@@ -220,7 +227,13 @@ function EventCard({ data, isRegisteredInRelatedEvents, ongoingEvents }) {
   );
 }
 
-function Event({ ongoingEvents, isRegisteredInRelatedEvents }) {
+function Event({
+  ongoingEvents,
+  isRegisteredInRelatedEvents,
+}: {
+  ongoingEvents: FormRecord[];
+  isRegisteredInRelatedEvents: boolean;
+}) {
   return (
     <>
       <div className={styles.eventBox}>

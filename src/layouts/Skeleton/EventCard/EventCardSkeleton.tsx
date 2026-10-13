@@ -9,7 +9,7 @@ import style from "./styles/eventskeleton.module.scss";
 import { SkeletonTheme } from "react-loading-skeleton";
 import AnimatedBox from "../../../assets/animations/socialPageAnimation";
 
-const EventCardSkeleton = ({ amount }) => {
+const EventCardSkeleton = ({ amount }: { amount: number }) => {
   const loadCards = Array(amount).fill(1);
 
   return loadCards.map((_, i) => (

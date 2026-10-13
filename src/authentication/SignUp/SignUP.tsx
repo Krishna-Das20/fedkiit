@@ -21,16 +21,30 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import postAuthRedirect from "../../utils/postAuthRedirect";
 import { YEAR_OPTIONS } from "../../data/yearOptions";
+import type { AlertProps } from "@/src/microInteraction/Alert/Alert";
+import type { ApiError } from "@/src/types/api";
 // import { validateData } from "../../utils/hooks/validation/validateSignupData";
+
+/** The account details sent to /api/auth/register once the OTP is entered. */
+type NewAccount = {
+  name: string;
+  email: string;
+  password: string;
+  rollNumber: string;
+  school: string;
+  college: string;
+  contactNo: string;
+  year: string;
+};
 
 const SignUp = () => {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
-  const [userObject, setUserObject] = useState({});
+  const [userObject, setUserObject] = useState<NewAccount | Record<string, never>>({});
   const { setEmail } = useContext(RecoveryContext);
   const [OTP, setOTP] = useState("");
   const [isTandChecked, setTandC] = useState(false);
-  const [alert, setAlert] = useState(null);
+  const [alert, setAlert] = useState<AlertProps | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [shouldNavigate, setShouldNavigate] = useState(false);
   const [navigatePath, setNavigatePath] = useState("/");
@@ -68,7 +82,8 @@ const SignUp = () => {
     }
   }, [shouldNavigate, navigatePath, router]);
 
-  const DataInp = (name, value) => {
+  // Keyed by each input's `name`, which matches a field of showUser.
+  const DataInp = (name: string, value: string) => {
     if (name === "college" && value.toLowerCase().startsWith("k")) {
       setShowDropdown(true);
     } else {
@@ -85,8 +100,8 @@ const SignUp = () => {
     setShowDropdown(false);
   };
 
-  const validateData = (data, isTandChecked) => {
-    const errors = [];
+  const validateData = (data: typeof showUser, isTandChecked: boolean) => {
+    const errors: string[] = [];
 
     if (!data.FirstName) {
       errors.push("First Name is required.");
@@ -132,7 +147,7 @@ const SignUp = () => {
     return errors;
   };
 
-  const handleSignUp = async (e) => {
+  const handleSignUp = async (e: React.FormEvent | React.MouseEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
@@ -162,9 +177,9 @@ const SignUp = () => {
     } = showUser;
 
     const name = FirstName + " " + LastName;
-    const saltRounds = parseInt(process.env.NEXT_PUBLIC_BCRYPT, 10);
+    const saltRounds = parseInt(String(process.env.NEXT_PUBLIC_BCRYPT), 10);
     const password = bcrypt.hashSync(Password, saltRounds);
-    const user = {
+    const user: NewAccount = {
       name,
       email,
       password,
@@ -216,7 +231,7 @@ const SignUp = () => {
       setAlert({
         type: "error",
         message:
-          error?.response?.data?.message ||
+          (error as ApiError)?.response?.data?.message ||
           "Failed to send OTP. Please try again.",
         position: "bottom-right",
         duration: 3000,
@@ -226,7 +241,7 @@ const SignUp = () => {
     }
   };
 
-  const handleVerifyOTP = async (enteredOTP) => {
+  const handleVerifyOTP = async (enteredOTP: string) => {
     if (enteredOTP) {
       try {
         const response = await api.post("/api/auth/register", {
@@ -266,7 +281,7 @@ const SignUp = () => {
       } catch (error) {
         setAlert({
           type: "error",
-          message: error?.response?.data?.message || "Enter valid Details",
+          message: (error as ApiError)?.response?.data?.message || "Enter valid Details",
           position: "bottom-right",
           duration: 3000,
         });
@@ -287,7 +302,7 @@ const SignUp = () => {
     setShowModal(false);
   };
 
-  const handleCheckBox = (e) => {
+  const handleCheckBox = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTandC(e.target.checked);
   };
 
@@ -484,7 +499,6 @@ const SignUp = () => {
                 <Text
                   style={{
                     fontSize: "0.774rem",
-                    textAlign: "center",
                     marginLeft: "5px",
                     textAlign: "center",
                   }}

@@ -12,14 +12,17 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { api } from "../../../services";
 import { Alert,MicroLoading } from "../../../microInteraction";
 import { useRouter } from "next/navigation";
+import type { ApiError } from "@/src/types/api";
+import type { AlertProps } from "@/src/microInteraction/Alert/Alert";
 
 
 export default function Login() {
-  const { setEmail, email, setOTP, setPage } = useContext(RecoveryContext);
+  // The context has no setPage (this screen never read it, nor setOTP).
+  const { setEmail, email } = useContext(RecoveryContext);
   const [loading, setLoading] = useState(false);
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const router = useRouter();
-  const [alert,setAlert]=useState(null);
+  const [alert,setAlert]=useState<AlertProps | null>(null);
   const [shouldNavigate, setShouldNavigate] = useState(false);
   const [navigatePath, setNavigatePath] = useState("/");
 
@@ -39,7 +42,7 @@ export default function Login() {
   }, [shouldNavigate, navigatePath, router]);
   
 
-  async function navigateToOtp(e) {
+  async function navigateToOtp(e: React.MouseEvent) {
     e.preventDefault(); 
     if (email) {
 
@@ -82,7 +85,7 @@ export default function Login() {
     // toast.error(response.error);
     setAlert({
       type: "error",
-      message: error?.response?.data?.message,
+      message: (error as ApiError)?.response?.data?.message,
       position: "bottom-right",
       duration: 2800,
     });
@@ -119,9 +122,9 @@ export default function Login() {
                 <div className={style.boxTitle}>
                   <p className={style.emailTitle}>Reset Password</p>
                 </div>
-                <div style={{
-                  marginbottom:"1.5rem"
-                }}>
+                {/* Its style was `marginbottom` (lower-case b), which is not a
+                    CSS property and never applied, so it is dropped. */}
+                <div>
                   <Input
                     type="text"
                     placeholder="eg:something@gmail.com"

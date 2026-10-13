@@ -18,12 +18,14 @@ import { Alert, MicroLoading } from "../../microInteraction";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import postAuthRedirect from "../../utils/postAuthRedirect";
+import type { AlertProps } from "@/src/microInteraction/Alert/Alert";
+import type { ApiError } from "@/src/types/api";
 
 const Login = () => {
   const router = useRouter();
   const { setEmail } = useContext(RecoveryContext);
   const authCtx = useContext(AuthContext);
-  const [alert, setAlert] = useState(null);
+  const [alert, setAlert] = useState<AlertProps | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [shouldNavigate, setShouldNavigate] = useState(false);
   const [navigatePath, setNavigatePath] = useState("/");
@@ -50,7 +52,7 @@ const Login = () => {
     }
   }, [shouldNavigate, navigatePath, router]);
 
-  const handleLogin = async (event) => {
+  const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsLoading(true);
 
@@ -127,12 +129,12 @@ const Login = () => {
       setAlert({
         type: "error",
         message:
-          error?.response?.data?.message ||
+          (error as ApiError)?.response?.data?.message ||
           "There was an error logging in. Please try again.",
         position: "bottom-right",
         duration: 3000,
       });
-      console.error("Error logging in:", error?.response?.data?.message);
+      console.error("Error logging in:", (error as ApiError)?.response?.data?.message);
     } finally {
       setIsLoading(false);
     }

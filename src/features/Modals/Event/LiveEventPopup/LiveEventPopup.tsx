@@ -5,6 +5,7 @@ import axios from "axios";
 import styles from "./styles/LiveEventPopup.module.scss";
 import { api } from "../../../../services";
 import { cdn } from "../../../../utils/cloudinary";
+import type { FormRecord } from "../../../../types/form";
 
 const LiveEventPopup = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -18,7 +19,7 @@ const LiveEventPopup = () => {
         const fetchedEvents = response.data;
 
         const currentEvent = fetchedEvents.events.filter(
-          (event) =>
+          (event: FormRecord) =>
             event.info.isEventPast === false &&
             event.info.isPublic === true &&
             event.info.relatedEvent === "null"

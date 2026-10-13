@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 
 function Sponsors() {
-  const [sponsors, setSponsors] = useState([]);
+  const [sponsors, setSponsors] = useState<{ image: string }[]>([]);
   const { ref, inView } = useInView({
     threshold: 0.1,
     triggerOnce: true,

@@ -6,10 +6,14 @@ import feedbackData from "../../../data/Feedback.json";
 import quoteImg from "../../../assets/images/quote.png";
 
 const Feedback = () => {
-  const feedbacksRef = useRef(null);
-  const containerRef = useRef(null);
+  const feedbacksRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLElement>(null);
 
-  const FeedbackCard = ({ quote }) => {
+  const FeedbackCard = ({
+    quote,
+  }: {
+    quote: { quote: string; title: string; post: string };
+  }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const long = quote.quote.length > 160;
     const truncatedQuote = long

@@ -3,7 +3,16 @@
 import React, { useState } from "react";
 import styles from "../styles/TeamManagement.module.scss";
 
-const ConfirmDialog = ({ isOpen, title, message, confirmText, onConfirm, onCancel }) => {
+type ConfirmDialogProps = {
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    onConfirm: () => void | Promise<void>;
+    onCancel: () => void;
+};
+
+const ConfirmDialog = ({ isOpen, title, message, confirmText, onConfirm, onCancel }: ConfirmDialogProps) => {
     const [loading, setLoading] = useState(false);
 
     if (!isOpen) return null;

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import PropTypes from "prop-types";
 import {
   Bold,
   Italic,
@@ -11,11 +10,25 @@ import {
   Link2,
   Eye,
   Pencil,
+  type LucideIcon,
 } from "lucide-react";
 import MarkdownContent from "./MarkdownContent";
 import styles from "./styles/MarkdownEditor.module.scss";
 
-function wrapSelection(textarea, before, after = before) {
+type Edit = {
+  next: string;
+  cursor: number;
+  selectionStart: number;
+  selectionEnd: number;
+};
+
+type ToolAction = (textarea: HTMLTextAreaElement) => Edit;
+
+function wrapSelection(
+  textarea: HTMLTextAreaElement,
+  before: string,
+  after = before,
+): Edit {
   const start = textarea.selectionStart;
   const end = textarea.selectionEnd;
   const value = textarea.value;
@@ -26,7 +39,7 @@ function wrapSelection(textarea, before, after = before) {
   return { next, cursor, selectionStart: start + before.length, selectionEnd: start + before.length + selected.length };
 }
 
-function prefixLines(textarea, prefix) {
+function prefixLines(textarea: HTMLTextAreaElement, prefix: string): Edit {
   const start = textarea.selectionStart;
   const end = textarea.selectionEnd;
   const value = textarea.value;
@@ -42,7 +55,7 @@ function prefixLines(textarea, prefix) {
   };
 }
 
-function insertLink(textarea) {
+function insertLink(textarea: HTMLTextAreaElement): Edit {
   const start = textarea.selectionStart;
   const end = textarea.selectionEnd;
   const value = textarea.value;
@@ -58,7 +71,12 @@ function insertLink(textarea) {
   };
 }
 
-const TOOLBAR = [
+const TOOLBAR: {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  action: ToolAction;
+}[] = [
   { id: "bold", label: "Bold", icon: Bold, action: (ta) => wrapSelection(ta, "**") },
   { id: "italic", label: "Italic", icon: Italic, action: (ta) => wrapSelection(ta, "*") },
   { id: "heading", label: "Heading", icon: Heading2, action: (ta) => prefixLines(ta, "## ") },
@@ -67,6 +85,17 @@ const TOOLBAR = [
   { id: "link", label: "Link", icon: Link2, action: insertLink },
 ];
 
+type MarkdownEditorProps = {
+  label?: string;
+  value?: string;
+  // Receives the textarea's change event, or `{ target: { value } }` after a
+  // toolbar edit, so callers read `e.target.value` either way.
+  onChange: (event: { target: { value: string } }) => void;
+  placeholder?: string;
+  className?: string;
+  containerStyle?: React.CSSProperties;
+};
+
 export default function MarkdownEditor({
   label,
   value,
@@ -74,11 +103,11 @@ export default function MarkdownEditor({
   placeholder,
   className = "",
   containerStyle,
-}) {
-  const textareaRef = useRef(null);
+}: MarkdownEditorProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [mode, setMode] = useState("write");
 
-  const apply = (action) => {
+  const apply = (action: ToolAction) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
     const { next, cursor, selectionStart, selectionEnd } = action(textarea);
@@ -157,12 +186,3 @@ export default function MarkdownEditor({
     </div>
   );
 }
-
-MarkdownEditor.propTypes = {
-  label: PropTypes.string,
-  value: PropTypes.string,
-  onChange: PropTypes.func.isRequired,
-  placeholder: PropTypes.string,
-  className: PropTypes.string,
-  containerStyle: PropTypes.object,
-};

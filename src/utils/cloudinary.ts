@@ -33,10 +33,10 @@ const NEXT_WIDTHS = [
   3840,
 ];
 
-const snap = (width) =>
+const snap = (width: number) =>
   NEXT_WIDTHS.find((w) => w >= width) ?? NEXT_WIDTHS[NEXT_WIDTHS.length - 1];
 
-export function cdn(url, width = 800) {
+export function cdn<T extends string | null | undefined>(url: T, width = 800): T {
   if (typeof url !== "string" || !url) return url;
 
   const w = Math.max(1, Math.round(width));
@@ -51,7 +51,7 @@ export function cdn(url, width = 800) {
     // `x_y` pairs before the next slash. Leave it alone rather than stacking.
     if (/^[a-z]{1,3}_[^/]*\//.test(after) && !/^v\d+\//.test(after)) return url;
 
-    return `${url.slice(0, at + marker.length)}f_auto,q_auto,c_limit,w_${w},dpr_auto/${after}`;
+    return `${url.slice(0, at + marker.length)}f_auto,q_auto,c_limit,w_${w},dpr_auto/${after}` as T;
   }
 
   // Other remote hosts — chiefly the Webflow CDN the carousel photos still live
@@ -62,7 +62,7 @@ export function cdn(url, width = 800) {
   // Root-relative paths are files in /public and are optimisable too — the hero
   // backdrop is a 1536x1024 PNG drawn in a 156px column, twice.
   if (/^https?:\/\//.test(url) || (url.startsWith("/") && !url.startsWith("//"))) {
-    return `/_next/image?url=${encodeURIComponent(url)}&w=${snap(w)}&q=75`;
+    return `/_next/image?url=${encodeURIComponent(url)}&w=${snap(w)}&q=75` as T;
   }
 
   return url;

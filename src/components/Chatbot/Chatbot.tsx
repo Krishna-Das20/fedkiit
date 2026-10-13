@@ -21,7 +21,48 @@ import Lottie from 'lottie-react';
 import foxAnimation from '@/public/lottie/fox_head_tilt.json';
 import { useRouter, usePathname } from "next/navigation";
 
-const MascotFoxAvatar = ({ size = 36 }) => (
+type ChatMessage = {
+    id: number;
+    text: string;
+    isUser: boolean;
+    timestamp: Date;
+    /** A bot card asking the visitor to sign in, optionally to a page. */
+    isAuthPrompt?: boolean;
+    targetPath?: string | null;
+};
+
+/** A suggested question shown as a pill above the input. */
+type FeaturedPrompt = {
+    id: string;
+    label: string;
+    query: string;
+    isActive?: boolean;
+};
+
+/** The parts of the Web Speech API this uses; Chrome ships it prefixed. */
+type SpeechRecognitionLike = {
+    continuous: boolean;
+    interimResults: boolean;
+    lang: string;
+    onstart: (() => void) | null;
+    onresult:
+        | ((event: {
+              resultIndex: number;
+              results: ArrayLike<ArrayLike<{ transcript: string }>>;
+          }) => void)
+        | null;
+    onerror: ((event: { error: string }) => void) | null;
+    onend: (() => void) | null;
+    start(): void;
+    stop(): void;
+};
+
+type SpeechWindow = Window & {
+    SpeechRecognition?: new () => SpeechRecognitionLike;
+    webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+};
+
+const MascotFoxAvatar = ({ size = 36 }: { size?: number }) => (
     <div style={{ width: size, height: size, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Lottie animationData={foxAnimation} loop={true} style={{ width: '100%', height: '100%' }} />
     </div>
@@ -49,7 +90,7 @@ const Chatbot = () => {
         return `Hello! I'm **${chatbotName}**, your assistant for FED KIIT. 🚀 How can I help you today?`;
     };
 
-    const [messages, setMessages] = useState([
+    const [messages, setMessages] = useState<ChatMessage[]>([
         {
             id: 1,
             text: getGreetingMessage(),
@@ -66,14 +107,14 @@ const Chatbot = () => {
     const [isAwaitingEmailConfirmation, setIsAwaitingEmailConfirmation] = useState(false);
 
     // Engagement & Flow Management States
-    const [featuredPrompts, setFeaturedPrompts] = useState([]);
+    const [featuredPrompts, setFeaturedPrompts] = useState<FeaturedPrompt[]>([]);
     const [teaserMessage, setTeaserMessage] = useState(`Explore FED & its Events! Ask ${process.env.NEXT_PUBLIC_CHATBOT_NAME || 'FEDI'}`);
     const [showTeaser, setShowTeaser] = useState(true);
 
-    const chatboxRef = useRef(null);
-    const messagesEndRef = useRef(null);
-    const lastMessageRef = useRef(null);
-    const recognitionRef = useRef(null);
+    const chatboxRef = useRef<HTMLDivElement>(null);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const lastMessageRef = useRef<HTMLDivElement>(null);
+    const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
     // Fetch dynamic flows & chatbot config on load
     useEffect(() => {
@@ -85,7 +126,7 @@ const Chatbot = () => {
                         setChatbotName(data.chatbotName);
                     }
                     if (Array.isArray(data.featuredPrompts) && data.featuredPrompts.length > 0) {
-                        setFeaturedPrompts(data.featuredPrompts.filter(p => p.isActive));
+                        setFeaturedPrompts(data.featuredPrompts.filter((p: FeaturedPrompt) => p.isActive));
                     }
                     if (data.teaserMessage) {
                         setTeaserMessage(data.teaserMessage);
@@ -189,9 +230,9 @@ const Chatbot = () => {
      * Process navigation hints & route intents from AI response
      * Automatically redirects the user to the target page in the background
      */
-    const processNavigation = (responseText) => {
+    const processNavigation = (responseText: string) => {
         let cleanedText = responseText;
-        let navigationPath = null;
+        let navigationPath: string | null = null;
 
         // 1. Check explicit [NAV:/path] tags from model
         const navMatch = responseText.match(/\[NAV:(\/[^\]]+)\]/i);
@@ -262,7 +303,7 @@ const Chatbot = () => {
     };
 
     // Handle login button click with target return destination
-    const handleLoginClick = (targetPath = null) => {
+    const handleLoginClick = (targetPath: string | null = null) => {
         if (typeof window !== 'undefined') {
             const dest = (typeof targetPath === 'string' && targetPath.startsWith('/'))
                 ? targetPath
@@ -292,7 +333,7 @@ const Chatbot = () => {
     };
 
     // Send message handler
-    const sendMessage = async (messageText = null) => {
+    const sendMessage = async (messageText: string | null = null) => {
         const textToSend = messageText || userInput;
         if (!textToSend?.trim()) return;
 
@@ -405,7 +446,7 @@ const Chatbot = () => {
                     setIsWaitingForEmailContent(true);
                 }
 
-                let { cleanedText, navigationPath } = processNavigation(rawResponse);
+                const { cleanedText, navigationPath } = processNavigation(rawResponse);
 
                 let finalBotText = (cleanedText && cleanedText.trim()) ? cleanedText : rawResponse;
                 if (!finalBotText?.trim()) {
@@ -443,7 +484,8 @@ const Chatbot = () => {
     const toggleVoiceInput = async () => {
         if (typeof window === 'undefined') return;
 
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const speechWindow = window as SpeechWindow;
+        const SpeechRecognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
 
         if (!SpeechRecognition) {
             alert('Voice input is not supported in this browser. Please use Chrome, Edge, or Safari.');
@@ -502,12 +544,12 @@ const Chatbot = () => {
     };
 
     // Clean message text by processing Markdown links & mailto tags
-    const cleanMessage = (text) => {
+    const cleanMessage = (text: string) => {
         if (!text) return '';
 
-        const cleanUrl = (u) => (u ? u.trim().replace(/[.,;)]+$/, '') : '');
+        const cleanUrl = (u: string) => (u ? u.trim().replace(/[.,;)]+$/, '') : '');
 
-        let cleanText = text
+        const cleanText = text
             .replace(/<a\s+href="[^"]*"\s*>([^<]*)<\/a>/gi, '$1')
             .replace(/<a\s+href='[^']*'\s*>([^<]*)<\/a>/gi, '$1')
             .replace(/<a>([^<]*)<\/a>/gi, '$1')
@@ -523,17 +565,17 @@ const Chatbot = () => {
             .replace(/(?<!\/)@fedkiit(?!\/)/gi, '[@fedkiit](https://www.instagram.com/fedkiit/)')
             .replace(/(?<!\[)([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})(?!\])/g, '[$1](https://mail.google.com/mail/?view=cm&to=$1)')
             // Convert bracketed pairs: [LinkedIn: url1, GitHub: url2] or [GitHub: url1, LinkedIn: url2]
-            .replace(/\[\s*LinkedIn:\s*(https?:\/\/[^\s,\]]+),\s*GitHub:\s*(https?:\/\/[^\s,\]]+)\s*\]/gi, (_, u1, u2) => `([LinkedIn](${cleanUrl(u1)}) [GitHub](${cleanUrl(u2)}))`)
-            .replace(/\[\s*GitHub:\s*(https?:\/\/[^\s,\]]+),\s*LinkedIn:\s*(https?:\/\/[^\s,\]]+)\s*\]/gi, (_, u1, u2) => `([GitHub](${cleanUrl(u1)}) [LinkedIn](${cleanUrl(u2)}))`)
+            .replace(/\[\s*LinkedIn:\s*(https?:\/\/[^\s,\]]+),\s*GitHub:\s*(https?:\/\/[^\s,\]]+)\s*\]/gi, (_: string, u1: string, u2: string) => `([LinkedIn](${cleanUrl(u1)}) [GitHub](${cleanUrl(u2)}))`)
+            .replace(/\[\s*GitHub:\s*(https?:\/\/[^\s,\]]+),\s*LinkedIn:\s*(https?:\/\/[^\s,\]]+)\s*\]/gi, (_: string, u1: string, u2: string) => `([GitHub](${cleanUrl(u1)}) [LinkedIn](${cleanUrl(u2)}))`)
             // Convert single bracketed [LinkedIn: url] or [GitHub: url]
-            .replace(/\[\s*LinkedIn:\s*(https?:\/\/[^\s,\]]+)\s*\]/gi, (_, u) => `[LinkedIn](${cleanUrl(u)})`)
-            .replace(/\[\s*GitHub:\s*(https?:\/\/[^\s,\]]+)\s*\]/gi, (_, u) => `[GitHub](${cleanUrl(u)})`)
+            .replace(/\[\s*LinkedIn:\s*(https?:\/\/[^\s,\]]+)\s*\]/gi, (_: string, u: string) => `[LinkedIn](${cleanUrl(u)})`)
+            .replace(/\[\s*GitHub:\s*(https?:\/\/[^\s,\]]+)\s*\]/gi, (_: string, u: string) => `[GitHub](${cleanUrl(u)})`)
             // Convert unbracketed LinkedIn: url or GitHub: url
-            .replace(/(?:LinkedIn|Linkedin):\s*(https?:\/\/(?:www\.)?linkedin\.com\/[^\s,\]\)<]+)/gi, (_, u) => `[LinkedIn](${cleanUrl(u)})${u.trim().slice(cleanUrl(u).length)}`)
-            .replace(/(?:GitHub|Github):\s*(https?:\/\/(?:www\.)?github\.com\/[^\s,\]\)<]+)/gi, (_, u) => `[GitHub](${cleanUrl(u)})${u.trim().slice(cleanUrl(u).length)}`)
+            .replace(/(?:LinkedIn|Linkedin):\s*(https?:\/\/(?:www\.)?linkedin\.com\/[^\s,\]\)<]+)/gi, (_: string, u: string) => `[LinkedIn](${cleanUrl(u)})${u.trim().slice(cleanUrl(u).length)}`)
+            .replace(/(?:GitHub|Github):\s*(https?:\/\/(?:www\.)?github\.com\/[^\s,\]\)<]+)/gi, (_: string, u: string) => `[GitHub](${cleanUrl(u)})${u.trim().slice(cleanUrl(u).length)}`)
             // Standalone raw GitHub or LinkedIn URLs not already inside [text](url)
-            .replace(/(?<!\]\(|href=["']|\[)(https?:\/\/(?:www\.)?linkedin\.com\/in\/[^\s,\]\)<]+)(?!\))/gi, (_, u) => `[LinkedIn](${cleanUrl(u)})${u.trim().slice(cleanUrl(u).length)}`)
-            .replace(/(?<!\]\(|href=["']|\[)(https?:\/\/(?:www\.)?github\.com\/[a-zA-Z0-9_.-]+(?:\/[a-zA-Z0-9_.-]+)*\/?)(?!\))/gi, (_, u) => `[GitHub](${cleanUrl(u)})${u.trim().slice(cleanUrl(u).length)}`);
+            .replace(/(?<!\]\(|href=["']|\[)(https?:\/\/(?:www\.)?linkedin\.com\/in\/[^\s,\]\)<]+)(?!\))/gi, (_: string, u: string) => `[LinkedIn](${cleanUrl(u)})${u.trim().slice(cleanUrl(u).length)}`)
+            .replace(/(?<!\]\(|href=["']|\[)(https?:\/\/(?:www\.)?github\.com\/[a-zA-Z0-9_.-]+(?:\/[a-zA-Z0-9_.-]+)*\/?)(?!\))/gi, (_: string, u: string) => `[GitHub](${cleanUrl(u)})${u.trim().slice(cleanUrl(u).length)}`);
 
         if (typeof window !== 'undefined' && DOMPurify && typeof DOMPurify.sanitize === 'function') {
             return DOMPurify.sanitize(cleanText);
@@ -546,7 +588,7 @@ const Chatbot = () => {
      * Handles both internal App Router navigation and external hyperlinks cleanly,
      * with special rich badges for GitHub and LinkedIn links.
      */
-    const LinkRenderer = ({ href, children }) => {
+    const LinkRenderer = ({ href, children }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => {
         let normalizedHref = href || '';
         if (normalizedHref === '/events') normalizedHref = '/Events';
         if (normalizedHref === '/events/past' || normalizedHref === '/events/pastEvents') normalizedHref = '/Events/pastEvents';
@@ -557,7 +599,7 @@ const Chatbot = () => {
 
         const isInternal = normalizedHref.startsWith('/') || normalizedHref.startsWith('#');
 
-        const handleClick = (e) => {
+        const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
             if (isInternal) {
                 e.preventDefault();
                 if (normalizedHref.startsWith('#')) {

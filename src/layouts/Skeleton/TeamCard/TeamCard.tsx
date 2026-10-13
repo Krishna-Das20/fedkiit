@@ -4,7 +4,11 @@ import Skeleton, { SkeletonTheme } from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import skeletonStyles from './styles/TeamCard.module.scss';
 
-const TeamCardSkeleton = ({ customStyles = {} }) => (
+const TeamCardSkeleton = ({
+  customStyles = {},
+}: {
+  customStyles?: Record<string, string>;
+}) => (
   <SkeletonTheme baseColor="#313131" highlightColor="#525252">
     <div className={skeletonStyles.skeletonDiv}>
       <div className={skeletonStyles.skeletonBack}>

@@ -1,20 +1,29 @@
 "use client";
 
 import { Input } from "../../../../components";
+import type { InputChange } from "../../../../components/Core/Input";
+import type {
+  FieldAnswer,
+  FormFieldDef,
+  FormSection,
+} from "../../../../types/form";
 import styles from "./styles/Preview.module.scss";
+
+/** Older forms may carry an explicit placeholder alongside the field. */
+type LiveField = FormFieldDef & { placeholder?: string };
 
 /**
  * A field's options. Admins type them as "A, B, C", so each is trimmed —
  * untrimmed, every answer after the first was saved with a leading space
  * (" Marketing"), which broke filtering the registrations sheet by domain.
  */
-const optionsOf = (field) =>
+const optionsOf = (field: FormFieldDef) =>
   String(field.value ?? "")
     .split(",")
     .map((option) => option.trim())
     .filter(Boolean);
 
-const getFieldPlaceholder = (field) => {
+const getFieldPlaceholder = (field: LiveField) => {
   if (field.type === "select") return `Choose ${field.name}`;
   if (field.placeholder) return field.placeholder;
 
@@ -38,8 +47,28 @@ const getFieldPlaceholder = (field) => {
   return `Enter ${field.name || "detail"}`;
 };
 
-const Section = ({ section, handleChange }) => {
-  const getInputFields = (field) => {
+/** What an Input shows for a field: the uploaded file's name, else the answer. */
+const displayValue = (field: FormFieldDef) =>
+  field.type === "file" || field.type === "image"
+    ? (field.onChangeValue as File | undefined)?.name
+    : (field.onChangeValue as string | undefined);
+
+/**
+ * The answer an Input change carries. A select hands over the chosen option;
+ * every other type passes an event-like object whose target holds the value.
+ */
+const answerFrom = (field: FormFieldDef, change: InputChange<string>) =>
+  field.type === "select"
+    ? (change as string)
+    : (change as { target: { value: FieldAnswer } }).target.value;
+
+type SectionModalProps = {
+  section: FormSection;
+  handleChange: (field: FormFieldDef, value: FieldAnswer) => void;
+};
+
+const Section = ({ section, handleChange }: SectionModalProps) => {
+  const getInputFields = (field: FormFieldDef) => {
     const validTypes = ["checkbox", "radio"];
     if (validTypes.includes(field.type)) {
       const valueToArray = optionsOf(field);
@@ -54,7 +83,8 @@ const Section = ({ section, handleChange }) => {
             placeholder={value}
             label={value}
             showLabel={false}
-            type={field.type}
+            // Only reached for the two types in validTypes.
+            type={field.type as "checkbox" | "radio"}
             value={value}
             name={field.name}
             onChange={(e) => handleChange(field, e.target.value)}
@@ -65,7 +95,7 @@ const Section = ({ section, handleChange }) => {
   };
 
   const getTeamFields = () => {
-    const data = [];
+    const data: FormFieldDef[][] = [];
     if (section.name === "Team Members") {
       section.fields.forEach((field, index) => {
         if (index % 3 === 0) {
@@ -78,7 +108,7 @@ const Section = ({ section, handleChange }) => {
   };
 
   const renderTeamFields = () => {
-    return getTeamFields().map((team, index) => (
+    return getTeamFields()!.map((team, index) => (
       <div
         key={index}
         style={{
@@ -103,13 +133,9 @@ const Section = ({ section, handleChange }) => {
               type={field.type}
               name={field.name}
               style={{ width: "100%" }}
-              value={
-                field.type === "file" || field.type === "image"
-                  ? field.onChangeValue?.name
-                  : field.onChangeValue
-              }
+              value={displayValue(field)}
               onChange={(e) => {
-                const val = field.type === "select" ? e : e.target.value;
+                const val = answerFrom(field, e);
                 handleChange(field, val);
               }}
               options={
@@ -142,13 +168,9 @@ const Section = ({ section, handleChange }) => {
                     label={`${field.name} ${field.isRequired ? "*" : ""}`}
                     type={field.type}
                     name={field.name}
-                    value={
-                      field.type === "file" || field.type === "image"
-                        ? field.onChangeValue?.name
-                        : field.onChangeValue
-                    }
+                    value={displayValue(field)}
                     onChange={(e) => {
-                      const val = field.type === "select" ? e : e.target.value;
+                      const val = answerFrom(field, e);
                       handleChange(field, val);
                     }}
                     options={

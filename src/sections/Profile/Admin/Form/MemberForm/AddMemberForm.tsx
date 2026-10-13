@@ -11,11 +11,28 @@ import {
   ComponentLoading,
   MicroLoading,
 } from "../../../../../microInteraction";
+import type { ApiError } from "@/src/types/api";
+import type { MemberExtra } from "@/src/types/member";
 // import {api} from "../../../../../services"
 
-function AddMemberForm({ onSuccess }) {
+type MemberDraft = {
+  name: string;
+  email: string;
+  access: string;
+  /**
+   * The chosen photo's file name. Typing in the image field stores the
+   * cropped File itself (or null), which the field then shows as text.
+   */
+  img: string | File | null;
+  linkedin: string;
+  github: string;
+  designation: string;
+  know: string;
+};
+
+function AddMemberForm({ onSuccess }: { onSuccess?: () => void }) {
   const authCtx = useContext(AuthContext);
-  const [data, setData] = useState({
+  const [data, setData] = useState<MemberDraft>({
     name: "",
     email: "",
     access: "",
@@ -25,27 +42,30 @@ function AddMemberForm({ onSuccess }) {
     designation: "",
     know: "",
   });
-  const [selectedFileName, setFileName] = useState(null);
-  const [croppedImageFile, setCroppedFile] = useState(null);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [imagePrv, setImagePrv] = useState(null);
+  const [selectedFileName, setFileName] = useState<string | null>(null);
+  const [croppedImageFile, setCroppedFile] = useState<File | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imagePrv, setImagePrv] = useState<string | null>(null);
   const [isloading, setIsLoading] = useState(false);
   const [isMicroLoading, setIsMicroLoading] = useState(false);
-  const [accessTypes, setAccessTypes] = useState([]);
-  const imgRef = useRef(null);
+  const [accessTypes, setAccessTypes] = useState<string[]>([]);
+  const imgRef = useRef<HTMLInputElement>(null);
   const [openModal, setOpenModal] = useState(false);
 
   useEffect(() => {
     if (authCtx.memberData) {
+      // Older rows keep `extra` as JSON text; reading a link off a string gives
+      // undefined, so those fall back to "" just as before.
+      const extra = authCtx.memberData.extra as MemberExtra | null | undefined;
       setData({
         name: authCtx.memberData.name || "",
         email: authCtx.memberData.email || "",
         access: authCtx.memberData.access || "",
         img: authCtx.memberData.img || "",
-        linkedin: authCtx.memberData?.extra?.linkedin || "",
-        github: authCtx.memberData?.extra?.github || "",
-        designation: authCtx.memberData?.extra?.designation || "",
-        know: authCtx.memberData?.extra?.know || "",
+        linkedin: extra?.linkedin || "",
+        github: extra?.github || "",
+        designation: extra?.designation || "",
+        know: extra?.know || "",
       });
       if (authCtx.memberData.img) {
         setImagePrv(authCtx.memberData.img);
@@ -81,9 +101,9 @@ function AddMemberForm({ onSuccess }) {
     return Boolean(email && email.trim() !== "" && access && access.trim() !== "");
   };
 
-  const filterData = (data) => {
-    const filteredData = {};
-    const extra = {};
+  const filterData = (data: MemberDraft) => {
+    const filteredData: Record<string, string> = {};
+    const extra: MemberExtra = {};
 
     if (data.designation && typeof data.designation === "string" && data.designation.trim() !== "") {
       extra.designation = data.designation.trim();
@@ -102,16 +122,17 @@ function AddMemberForm({ onSuccess }) {
       filteredData.extra = JSON.stringify(extra);
     }
 
-    Object.keys(data).forEach((key) => {
+    (Object.keys(data) as (keyof MemberDraft)[]).forEach((key) => {
+      const value = data[key];
       if (
         key !== "designation" &&
         key !== "github" &&
         key !== "linkedin" &&
         key !== "know" &&
-        typeof data[key] === "string" &&
-        data[key].trim() !== ""
+        typeof value === "string" &&
+        value.trim() !== ""
       ) {
-        filteredData[key] = data[key].trim();
+        filteredData[key] = value.trim();
       }
     });
 
@@ -136,7 +157,7 @@ function AddMemberForm({ onSuccess }) {
           formData.append("image", croppedImageFile);
         }
 
-        const headers = {};
+        const headers: Record<string, string> = {};
         const token = window.localStorage.getItem("token");
         if (token) {
           headers["Authorization"] = `Bearer ${token}`;
@@ -177,7 +198,7 @@ function AddMemberForm({ onSuccess }) {
       } catch (error) {
         console.error("Error adding/updating member:", error);
         const errorMsg =
-          error?.response?.data?.message ||
+          (error as ApiError)?.response?.data?.message ||
           "Failed to add member. Please try again.";
         alert(errorMsg);
       } finally {
@@ -188,7 +209,7 @@ function AddMemberForm({ onSuccess }) {
     }
   };
 
-  const isSafeImagePreviewUrl = (url) => {
+  const isSafeImagePreviewUrl = (url: unknown): url is string => {
     return (
       typeof url === "string" &&
       (url.startsWith("blob:") ||
@@ -199,8 +220,8 @@ function AddMemberForm({ onSuccess }) {
     );
   };
 
-  const handleFileChange = (event) => {
-    const file = event.target.files[0];
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files![0];
     if (file) {
       if (!file.type || !file.type.startsWith("image/")) {
         return;
@@ -227,7 +248,7 @@ function AddMemberForm({ onSuccess }) {
     setOpenModal(false);
   };
 
-  const updateImagePreview = (url) => {
+  const updateImagePreview = (url: string) => {
     if (isSafeImagePreviewUrl(url)) {
       setImagePrv(url);
     } else {
@@ -297,8 +318,8 @@ function AddMemberForm({ onSuccess }) {
             label="Image"
             className={styles.memberInput}
             containerStyle={{ width: imagePrv ? "90%" : "100%" }}
-            value={data.img}
-            onChange={(e) => setData({ ...data, img: croppedImageFile })}
+            value={data.img as string | null}
+            onChange={() => setData({ ...data, img: croppedImageFile })}
           />
           <input
             style={{ display: "none" }}

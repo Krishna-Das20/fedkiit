@@ -14,6 +14,7 @@ import Accordion from "../../../components/LiveEvents/Accordian/Accordian";
 import Faqs from "../../../sections/LiveEvents/Pixel_AI_Hack/Faqs/Faqs";
 import LiveInsights from "../../../sections/LiveEvents/Pixel_AI_Hack/LiveInsights/LiveInsights";
 import TeamPage from "../../../sections/LiveEvents/Pixel_AI_Hack/TeamPage/TeamPage";
+import type { FormRecord } from "../../../types/form";
 
 function Pixel_AI_Hack() {
   useEffect(() => {
@@ -21,8 +22,8 @@ function Pixel_AI_Hack() {
   }, []);
 
   const authCtx = useContext(AuthContext);
-  const [eventName, setEventName] = useState("");
-  const [ongoingEvents, setOngoingEvents] = useState([]);
+  const [eventName, setEventName] = useState<string | undefined>("");
+  const [ongoingEvents, setOngoingEvents] = useState<FormRecord[]>([]);
   const [isRegisteredInRelatedEvents, setIsRegisteredInRelatedEvents] =
     useState(false);
 
@@ -36,13 +37,13 @@ function Pixel_AI_Hack() {
       try {
         const response = await api.get("/api/form/getAllForms");
         if (response.status === 200) {
-          const fetchedEvents = response.data.events;
+          const fetchedEvents: FormRecord[] = response.data.events;
           const sortedEvents = fetchedEvents.sort((a, b) => {
             // Extract priority and event dates
-            const priorityA = parseInt(a.info.eventPriority, 10);
-            const priorityB = parseInt(b.info.eventPriority, 10);
-            const dateA = new Date(a.info.eventDate);
-            const dateB = new Date(b.info.eventDate);
+            const priorityA = parseInt(String(a.info.eventPriority), 10);
+            const priorityB = parseInt(String(b.info.eventPriority), 10);
+            const dateA = new Date(a.info.eventDate as string);
+            const dateB = new Date(b.info.eventDate as string);
             const titleA = a.info.eventTitle || "";
             const titleB = b.info.eventTitle || "";
 
@@ -92,7 +93,6 @@ function Pixel_AI_Hack() {
 
   useEffect(() => {
     const registeredEventIds = authCtx.user.regForm || [];
-    "Registered Events", registeredEventIds;
 
     const relatedEventIds = ongoingEvents
       .map((event) => event.info.relatedEvent) // Extract relatedEvent IDs
@@ -104,7 +104,7 @@ function Pixel_AI_Hack() {
     let isRegisteredInRelatedEvents = false;
     if (registeredEventIds.length > 0 && relatedEventIds.length > 0) {
       isRegisteredInRelatedEvents = relatedEventIds.some((relatedEventId) =>
-        registeredEventIds.includes(relatedEventId)
+        registeredEventIds.includes(relatedEventId as string)
       );
     }
 
@@ -121,11 +121,8 @@ function Pixel_AI_Hack() {
         eventName={eventName}
       />
       <Sponsor />
-      <LiveInsights
-        ongoingEvents={ongoingEvents}
-        isRegisteredInRelatedEvents={isRegisteredInRelatedEvents}
-        eventName={eventName}
-      />
+      {/* LiveInsights is static copy; the event props it was handed went unused. */}
+      <LiveInsights />
       <Attend />
       <Faqs />
       <TeamPage />

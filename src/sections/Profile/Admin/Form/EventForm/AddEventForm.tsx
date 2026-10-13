@@ -25,7 +25,7 @@ function AddEventForm() {
     /(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png)/g
   );
 
-  const onAddEvent = (e) => {
+  const onAddEvent = (e: React.MouseEvent) => {
     e.preventDefault();
     if (isFormValid()) {
       if (isValidLink) {

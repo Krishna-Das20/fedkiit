@@ -4,7 +4,7 @@
 import { motion } from 'framer-motion';
 import style from "./styles/Attend.module.scss";
 
-function Card({ title }) {
+function Card({ title }: { title: string }) {
   return (
     <motion.div
       className={style.card}

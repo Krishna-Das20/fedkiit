@@ -11,6 +11,9 @@ import { Alert, ComponentLoading } from "../../microInteraction";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { getEventSlug } from "../../utils/slug";
 import style from "./styles/EventForm.module.scss";
+import type { AlertProps } from "@/src/microInteraction/Alert/Alert";
+import type { FormRecord } from "@/src/types/form";
+import type { ApiError } from "@/src/types/api";
 
 /**
  * /Events/:eventId/Form — registration, as a page.
@@ -22,10 +25,10 @@ import style from "./styles/EventForm.module.scss";
  * of "back" out of a half-filled form.
  */
 const EventForm = () => {
-  const [eventData, setEventData] = useState(null);
+  const [eventData, setEventData] = useState<FormRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [alert, setAlert] = useState(null);
-  const { eventId } = useParams();
+  const [alert, setAlert] = useState<AlertProps | null>(null);
+  const { eventId } = useParams<{ eventId: string }>();
   // Next returns the params object itself, not React Router's [params, setter]
   // pair. Destructuring it as an array yields undefined and crashes on `.get`.
   const searchParams = useSearchParams();
@@ -47,7 +50,7 @@ const EventForm = () => {
   }, [alert]);
 
   // [v2] If user is already registered and has a teamCode, auto-join the team
-  const handleAutoJoin = useCallback(async (formId, code) => {
+  const handleAutoJoin = useCallback(async (formId: string, code: string) => {
     try {
       const response = await api.post("/api/form/joinTeam", {
         formId,
@@ -65,7 +68,7 @@ const EventForm = () => {
         return true;
       }
     } catch (err) {
-      const msg = err.response?.data?.message || "Failed to join team";
+      const msg = (err as ApiError).response?.data?.message || "Failed to join team";
       Alert({
         type: "error",
         message: msg,

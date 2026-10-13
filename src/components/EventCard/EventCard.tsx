@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useContext } from "react";
-import PropTypes from "prop-types";
 import style from "./styles/EventCard.module.scss";
 
 import Share from "../../features/Modals/Event/ShareModal/ShareModal";
@@ -24,8 +23,16 @@ import {
 } from "../../utils/batchRestriction";
 import { cdn } from "../../utils/cloudinary";
 import { getEventSlug } from "../../utils/slug";
+import type { FormRecord } from "../../types/form";
+import type { AlertProps } from "@/src/microInteraction/Alert/Alert";
 
-export function EventCardSkeleton({ variant = "default" }) {
+type CardVariant = "default" | "featured";
+
+export function EventCardSkeleton({
+  variant = "default",
+}: {
+  variant?: CardVariant;
+}) {
   const featured = variant === "featured";
 
   return (
@@ -52,7 +59,29 @@ export function EventCardSkeleton({ variant = "default" }) {
   );
 }
 
-const EventCard = (props) => {
+type EventCardProps = {
+  data: FormRecord;
+  onOpen?: () => void;
+  type: string;
+  showShareButton?: boolean;
+  showRegisterButton?: boolean;
+  additionalContent?: React.ReactNode;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  enableEdit?: boolean;
+  isLoading?: boolean;
+  /** Title of the prerequisite event, named in the "Locked" alert. */
+  eventName?: string;
+  variant?: CardVariant;
+  // Still passed by some pages from the original port; the card ignores them.
+  customStyles?: Record<string, unknown>;
+  aosDisable?: boolean;
+  isPastpage?: boolean;
+  onHover?: () => void;
+  isRegisteredInRelatedEvents?: boolean;
+};
+
+const EventCard = (props: EventCardProps) => {
   const {
     data,
     onOpen,
@@ -72,7 +101,7 @@ const EventCard = (props) => {
   const authCtx = useContext(AuthContext);
   const [isOpen, setOpen] = useState(false);
   const [isQRModalOpen, setQRModalOpen] = useState(false);
-  const [remainingTime, setRemainingTime] = useState("");
+  const [remainingTime, setRemainingTime] = useState<string | null>("");
   const [btnTxt, setBtnTxt] = useState("Register Now");
   const router = useRouter();
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -80,7 +109,7 @@ const EventCard = (props) => {
   const [isMicroLoading, setIsMicroLoading] = useState(false);
   const [shouldNavigate, setShouldNavigate] = useState(false);
   const [navigatePath, setNavigatePath] = useState("/");
-  const [alert, setAlert] = useState(null);
+  const [alert, setAlert] = useState<AlertProps | null>(null);
 
   useEffect(() => {
     if (shouldNavigate) {
@@ -113,10 +142,10 @@ const EventCard = (props) => {
     }
   }, [info.regDateAndTime]);
 
-  const date = new Date(info.eventDate);
+  const date = new Date(info.eventDate as string);
   const day = date.getDate();
 
-  const getOrdinalSuffix = (day) => {
+  const getOrdinalSuffix = (day: number) => {
     if (day > 3 && day < 21) return "th"; // Handles 4-20
     switch (day % 10) {
       case 1:
@@ -142,8 +171,10 @@ const EventCard = (props) => {
 
   const calculateRemainingTime = () => {
     // Parse the regDateAndTime received from backend
+    // Called on mount even without a date; parse then yields Invalid Date,
+    // which reads as "not counting down".
     const regStartDate = parse(
-      info.regDateAndTime,
+      info.regDateAndTime as string,
       "MMMM do yyyy, h:mm:ss a",
       new Date()
     );
@@ -239,7 +270,7 @@ const EventCard = (props) => {
     remainingTime,
   ]);
 
-  const handleShare = (e) => {
+  const handleShare = (e?: React.SyntheticEvent) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
     setOpen(true);
@@ -388,7 +419,7 @@ const EventCard = (props) => {
     authCtx.user.regForm.includes(data.id);
 
   const isUpcoming =
-    !isPast && new Date(info.eventDate).getTime() >= Date.now();
+    !isPast && new Date(info.eventDate as string).getTime() >= Date.now();
 
   // Featured cards that are still ahead of us get an "Upcoming" badge so the
   // spotlight is unambiguous - the green "Open" only answers "can I register".
@@ -574,7 +605,7 @@ const EventCard = (props) => {
         {/* Cropped from the bottom rather than the centre — see `.image` in the
             stylesheet for why. */}
         <img
-          src={cdn(info.eventImg, variant === "featured" ? 1000 : 700)}
+          src={cdn(info.eventImg ?? undefined, variant === "featured" ? 1000 : 700)}
           className={style.image}
           style={{ opacity: imageLoaded ? 1 : 0 }}
           alt=""
@@ -725,22 +756,6 @@ const EventCard = (props) => {
       <Alert />
     </article>
   );
-};
-
-EventCard.propTypes = {
-  data: PropTypes.object.isRequired,
-  onOpen: PropTypes.func,
-  type: PropTypes.string.isRequired,
-  customStyles: PropTypes.object,
-  showShareButton: PropTypes.bool,
-  showRegisterButton: PropTypes.bool,
-  additionalContent: PropTypes.node,
-  aosDisable: PropTypes.bool,
-  onEdit: PropTypes.func,
-  onDelete: PropTypes.func,
-  enableEdit: PropTypes.bool,
-  isLoading: PropTypes.bool,
-  variant: PropTypes.oneOf(["default", "featured"]),
 };
 
 export default EventCard;

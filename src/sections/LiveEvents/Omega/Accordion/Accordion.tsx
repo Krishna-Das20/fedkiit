@@ -6,12 +6,14 @@ import data from "../../../../data/liveEvents/omega/Accordion.json";
 import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 
+type AccordionEntry = { title: string; content: string };
+
 const Accordion = () => {
-  const [activeIndex, setActiveIndex] = useState(null);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [visibleCount, setVisibleCount] = useState(3); // Initial number of visible items
   const [showAll, setShowAll] = useState(false); // Track if all items are shown
 
-  const toggleAccordion = (index) => {
+  const toggleAccordion = (index: number) => {
     setActiveIndex(activeIndex === index ? null : index);
   };
 
@@ -32,7 +34,17 @@ const Accordion = () => {
 
   const itemsToShow = data.slice(0, visibleCount);
 
-  const AccordionItem = ({ item, index, activeIndex, toggleAccordion }) => {
+  const AccordionItem = ({
+    item,
+    index,
+    activeIndex,
+    toggleAccordion,
+  }: {
+    item: AccordionEntry;
+    index: number;
+    activeIndex: number | null;
+    toggleAccordion: (index: number) => void;
+  }) => {
     const { ref, inView } = useInView({
       threshold: 0.1,
       triggerOnce: true,

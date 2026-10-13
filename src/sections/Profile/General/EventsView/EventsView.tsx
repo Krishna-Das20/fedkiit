@@ -8,14 +8,20 @@ import { api } from "../../../../services";
 import { ComponentLoading, MicroLoading } from "../../../../microInteraction";
 import { FORM_ANALYTICS_ROLES_CLIENT } from "@/lib/auth/roles";
 import Link from "next/link";
+import type { FormRecord } from "@/src/types/form";
+import type { CertificateWithEvent } from "@/src/types/certificate";
+
+/** Older stored forms also carry a Mongo-style `_id`. */
+type ListedForm = FormRecord & { _id?: string };
 
 const Events = () => {
   const authCtx = useContext(AuthContext);
-  const [events, setEvents] = useState([]);
+  const [events, setEvents] = useState<ListedForm[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [certificates, setCertificates] = useState([]);
-  const [certMap, setCertMap] = useState({});
+  const [error, setError] = useState<{ message: string } | null>(null);
+  const [certificates, setCertificates] = useState<CertificateWithEvent[]>([]);
+  // Form id -> link to its certificate's verification page.
+  const [certMap, setCertMap] = useState<Record<string, string>>({});
   const [loadingCerts, setLoadingCerts] = useState(true); // New state for certificate loading
 
   // The public event page. There is no /profile/Events route, so the View
@@ -35,7 +41,7 @@ const Events = () => {
         const userEvents = authCtx.user.regForm;
 
         if (response.status === 200) {
-          let fetchedEvents = response.data.events;
+          const fetchedEvents: ListedForm[] = response.data.events;
           if (authCtx.user.access !== "USER") {
             // Set events for non-users
             setEvents(sortEventsByDate(fetchedEvents));
@@ -119,20 +125,20 @@ const Events = () => {
    * independent reason the View button led nowhere. The joined event now comes
    * back with the certificate itself, so no extra request is needed.
    */
-  const getCertificateForEvent = (formId) => {
+  const getCertificateForEvent = (formId: string) => {
     const found = certificates.find((item) => item.event?.formId === formId);
     return found ? found.cert : null;
   };
 
-  const sortEventsByDate = (events) => {
+  const sortEventsByDate = (events: ListedForm[]) => {
     return events.sort(
-      (a, b) => new Date(b.info.eventDate) - new Date(a.info.eventDate)
+      (a, b) => new Date(b.info.eventDate as string).getTime() - new Date(a.info.eventDate as string).getTime()
     );
   };
 
-  const formatDate = (dateString) => {
-    const options = { day: "2-digit", month: "2-digit", year: "numeric" };
-    return new Date(dateString)
+  const formatDate = (dateString: string | undefined) => {
+    const options: Intl.DateTimeFormatOptions = { day: "2-digit", month: "2-digit", year: "numeric" };
+    return new Date(dateString as string)
       .toLocaleDateString("en-GB", options)
       .replace(/\//g, "-");
   };
@@ -140,7 +146,7 @@ const Events = () => {
   // Pure lookups against data already in hand, so this is a plain synchronous
   // pass rather than one request per event.
   useEffect(() => {
-    const map = {};
+    const map: Record<string, string> = {};
     for (const event of events) {
       const cert = getCertificateForEvent(event.id);
       if (cert) map[event.id] = `/verify/certificate?id=${cert.id}`;

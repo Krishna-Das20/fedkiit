@@ -8,17 +8,22 @@ import AddMemberForm from "../../Form/MemberForm/AddMemberForm";
 import AuthContext from "../../../../../context/AuthContext";
 import { api } from "../../../../../services";
 import { Alert, ComponentLoading } from "../../../../../microInteraction";
+import type { AlertProps } from "@/src/microInteraction/Alert/Alert";
+import type { Member } from "@/src/types/member";
+
+/** Team rows always carry an id, a name and a role. */
+type TeamRow = Member & { id: string; name: string; access: string };
 
 function ViewMember() {
   const [memberActivePage, setMemberActivePage] = useState("Board");
-  const [members, setMembers] = useState([]);
-  const [access, setAccess] = useState([]);
-  const [selectedMember, setSelectedMember] = useState(null);
+  const [members, setMembers] = useState<TeamRow[]>([]);
+  const [access, setAccess] = useState<string[]>([]);
+  const [selectedMember, setSelectedMember] = useState<TeamRow | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const authCtx = useContext(AuthContext);
   const [enablingUpdate, setEnable] = useState(false);
-  const [alert, setAlert] = useState(null);
+  const [alert, setAlert] = useState<AlertProps | null>(null);
 
   useEffect(() => {
     if (alert) {
@@ -53,7 +58,7 @@ function ViewMember() {
         // the Prisma AccessTypes enum. It used to be fetched and then thrown
         // away in favour of a hardcoded `testAccess` array, so the dropdown
         // silently went stale whenever the schema gained or lost a role.
-        const accessTypes = Array.isArray(fetchedAccess) ? fetchedAccess : [];
+        const accessTypes: string[] = Array.isArray(fetchedAccess) ? fetchedAccess : [];
 
         const filteredAccess = accessTypes.filter(
           (accessType) =>
@@ -84,7 +89,7 @@ function ViewMember() {
     fetchMemberData();
   }, [fetchMemberData]);
 
-  const handleButtonClick = (menu) => {
+  const handleButtonClick = (menu: string) => {
     if (menu === "add member" && enablingUpdate) {
       authCtx.memberData = null;
       authCtx.croppedImageFile = null;
@@ -124,7 +129,7 @@ function ViewMember() {
       authCtx.memberData = null;
     }
 
-    let filteredMembers = [];
+    let filteredMembers: TeamRow[] = [];
     if (memberActivePage.toLowerCase() === "board") {
       filteredMembers = members.filter(
         (member) =>
@@ -183,14 +188,16 @@ function ViewMember() {
     // "" for a missing override, so behaviour is unchanged.
   };
 
-  const handleUpdate = (member) => {
+  // TeamCard has already put the member on authCtx.memberData.
+  const handleUpdate = () => {
     setMemberActivePage("Add Member");
     setEnable(true);
   };
 
   const handleRemove = async () => {
     try {
-      const id = authCtx.memberData.id;
+      // TeamCard sets memberData just before calling onRemove.
+      const id = authCtx.memberData!.id;
       const response = await api.delete(`/api/user/deleteMember/${id}`, {
         headers: {
           Authorization: `Bearer ${window.localStorage.getItem("token")}`,

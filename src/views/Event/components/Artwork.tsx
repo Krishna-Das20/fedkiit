@@ -8,7 +8,11 @@
  * without needing a fill, a shadow or a second tone.
  */
 
-export const NoEventsArt = (props) => (
+import type { SVGProps } from "react";
+
+type ArtProps = SVGProps<SVGSVGElement>;
+
+export const NoEventsArt = (props: ArtProps) => (
   <svg
     viewBox="0 0 120 96"
     role="img"
@@ -29,7 +33,7 @@ export const NoEventsArt = (props) => (
   </svg>
 );
 
-export const ErrorArt = (props) => (
+export const ErrorArt = (props: ArtProps) => (
   <svg
     viewBox="0 0 120 96"
     role="img"
@@ -47,7 +51,7 @@ export const ErrorArt = (props) => (
   </svg>
 );
 
-export const SuccessArt = (props) => (
+export const SuccessArt = (props: ArtProps) => (
   <svg
     viewBox="0 0 96 96"
     role="img"

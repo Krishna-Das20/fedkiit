@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef } from "react";
-import PropTypes from "prop-types";
 import FormField from "./FormField";
 import styles from "./styles/Form.module.scss";
 import Button from "../Core/Button";
@@ -12,10 +11,26 @@ import { getOutboundList } from "../../sections/Profile/Admin/Form/NewForm/NewFo
 import { GrNavigate } from "react-icons/gr";
 import SectionValidation from "./SectionValidation";
 import { nanoid } from "nanoid";
+import type {
+  FieldValidation,
+  FormFieldDef,
+  FormSection,
+  SectionRule,
+} from "../../types/form";
 
 const hasOptions = ["radio", "checkbox", "select"];
 
-const Section = (props) => {
+type SectionProps = {
+  section: FormSection;
+  sections: FormSection[];
+  setsections: (sections: FormSection[]) => void;
+  /** Auto-generated sections (the payment step) a redirect may also target. */
+  meta?: FormSection[];
+  showAddButton?: boolean;
+  disabled?: boolean;
+};
+
+const Section = (props: SectionProps) => {
   const {
     section,
     sections,
@@ -27,7 +42,7 @@ const Section = (props) => {
   const [hideSection, sethideSection] = useState(false);
   const [showValidations, setshowValidations] = useState(false);
   const [showDescription, setshowDescription] = useState(false);
-  const scrollRef = useRef(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const sectionFields = section.fields || [];
 
   const onAddField = () => {
@@ -53,14 +68,14 @@ const Section = (props) => {
     });
     setsections(newSections);
     setTimeout(() => {
-      scrollRef.current.scrollIntoView({
+      scrollRef.current!.scrollIntoView({
         behavior: "smooth",
         block: "nearest",
       });
     }, 100);
   };
 
-  const onUpdateField = (field, property) => {
+  const onUpdateField = (field: FormFieldDef, property: string) => {
     const updatedSections = sections.map((sec) => {
       let updatedFields = sec.fields;
       if (section._id === sec._id) {
@@ -135,9 +150,9 @@ const Section = (props) => {
     setsections(updatedSections);
   };
 
-  const onRemoveField = (field) => {
+  const onRemoveField = (field: FormFieldDef) => {
     const isConfirm = confirm("Are you sure you want to delete this field?");
-    let prevSection = null;
+    let prevSection: FormSection | null = null;
     if (isConfirm) {
       const newSections = sections.map((sec) => {
         if (section._id === sec._id) {
@@ -224,7 +239,12 @@ const Section = (props) => {
     setsections(updatedSections);
   };
 
-  const onFieldValidationChange = (value, property, field, validationIndex) => {
+  const onFieldValidationChange = (
+    value: string,
+    property: keyof FieldValidation,
+    field: FormFieldDef,
+    validationIndex: string,
+  ) => {
     const newSections = sections.map((sec) => {
       if (section._id === sec._id) {
         return {
@@ -256,7 +276,7 @@ const Section = (props) => {
     setsections(newSections);
   };
 
-  const addNewValidation = (field) => {
+  const addNewValidation = (field: FormFieldDef) => {
     const newSections = sections.map((sec) => {
       if (section._id === sec._id) {
         return {
@@ -287,7 +307,7 @@ const Section = (props) => {
     setsections(newSections);
   };
 
-  const onRemoveValidation = (field, validationIndex) => {
+  const onRemoveValidation = (field: FormFieldDef, validationIndex: string) => {
     const newSections = sections.map((sec) => {
       if (section._id === sec._id) {
         return {
@@ -343,22 +363,26 @@ const Section = (props) => {
     setsections(newSections);
   };
 
-  const handleChangeSectionValidation = (value, property, _id) => {
+  const handleChangeSectionValidation = (
+    value: string,
+    property: keyof SectionRule,
+    _id?: string,
+  ) => {
     const { backSection, nextSection } = getOutboundList(sections, section._id);
-    let previousOnNextValue = null;
+    let previousOnNextValue: string | null = null;
 
     const updatedSections = sections.map((sec) => {
       if (sec._id === section._id) {
         if (property === "field_id") {
           const field = section.fields.find((fld) => fld._id === value);
-          let secValidations = [section.validations[0]];
+          const secValidations = [section.validations[0]];
 
           const options = field?.value
             ?.split(",")
             .map((val) => val.trim())
             .filter(Boolean);
 
-          options.forEach((val) => {
+          options!.forEach((val) => {
             secValidations.push({
               _id: nanoid(),
               field_id: value,
@@ -426,7 +450,7 @@ const Section = (props) => {
     setsections(updatedSections);
   };
 
-  const handleRemoveValidation = (_id) => {
+  const handleRemoveValidation = (_id: string) => {
     const newSections = sections.map((sec) => {
       if (section._id === sec._id) {
         return {
@@ -542,7 +566,7 @@ const Section = (props) => {
                 field={field}
                 section={section}
                 sections={sections}
-                setformFields={(data, property) => {
+                setformFields={(_fields, property) => {
                   onUpdateField(field, property);
                 }}
                 onRemoveField={() => {
@@ -630,31 +654,6 @@ const Section = (props) => {
       {disabled && <div className={styles.disabledSec} />}
     </div>
   );
-};
-
-Section.propTypes = {
-  section: PropTypes.shape({
-    _id: PropTypes.number.isRequired,
-    name: PropTypes.string.isRequired,
-    fields: PropTypes.arrayOf(
-      PropTypes.shape({
-        _id: PropTypes.number.isRequired,
-        name: PropTypes.string.isRequired,
-        type: PropTypes.string.isRequired,
-        value: PropTypes.string.isRequired,
-        isRequired: PropTypes.bool.isRequired,
-        validations: PropTypes.arrayOf(
-          PropTypes.shape({
-            _id: PropTypes.number.isRequired,
-            condition: PropTypes.string.isRequired,
-            target: PropTypes.string.isRequired,
-          })
-        ).isRequired,
-      })
-    ).isRequired,
-  }).isRequired,
-  sections: PropTypes.array.isRequired,
-  setsections: PropTypes.func.isRequired,
 };
 
 export default Section;

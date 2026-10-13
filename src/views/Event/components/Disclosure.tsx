@@ -1,7 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
-import PropTypes from "prop-types";
+import { useId, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import style from "../styles/Event.module.scss";
 
@@ -13,7 +12,21 @@ import style from "../styles/Event.module.scss";
  * event cards mounted means thirty-odd countdown intervals ticking behind a
  * closed section.
  */
-const Disclosure = ({ title, count, action, defaultOpen = false, children }) => {
+type DisclosureProps = {
+  title: string;
+  count?: number;
+  action?: ReactNode;
+  defaultOpen?: boolean;
+  children?: ReactNode;
+};
+
+const Disclosure = ({
+  title,
+  count,
+  action,
+  defaultOpen = false,
+  children,
+}: DisclosureProps) => {
   const [open, setOpen] = useState(defaultOpen);
   const panelId = useId();
 
@@ -44,14 +57,6 @@ const Disclosure = ({ title, count, action, defaultOpen = false, children }) => 
       {open && <div id={panelId}>{children}</div>}
     </section>
   );
-};
-
-Disclosure.propTypes = {
-  title: PropTypes.string.isRequired,
-  count: PropTypes.number,
-  action: PropTypes.node,
-  defaultOpen: PropTypes.bool,
-  children: PropTypes.node,
 };
 
 export default Disclosure;

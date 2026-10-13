@@ -15,7 +15,9 @@ import {
 } from "react-share";
 import { Copy, Check } from "lucide-react";
 
-const XIconCustom = ({ size = 44, round = true }) => {
+type IconProps = { size?: number; round?: boolean };
+
+const XIconCustom = ({ size = 44, round = true }: IconProps) => {
   return (
     <div
       style={{
@@ -54,6 +56,11 @@ export function ShareSocial({
   title,
   socialTypes = ["whatsapp", "twitter", "telegram", "linkedin"],
   onSocialButtonClicked,
+}: {
+  url?: string;
+  title?: string;
+  socialTypes?: string[];
+  onSocialButtonClicked?: (click: { social: string; url: string }) => void;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -97,7 +104,7 @@ export function ShareSocial({
         }}
       >
         {socialTypes
-          .map((type) => [type, BUTTONS[type]])
+          .map((type) => [type, BUTTONS[type as keyof typeof BUTTONS]] as const)
           .filter(([, entry]) => entry)
           .map(([type, { Button, Icon, label }]) => (
             <Button

@@ -5,16 +5,25 @@ import { api } from "../../../services";
 import { Alert } from "../../../microInteraction";
 import { IoSearch, IoClose, IoPersonAdd, IoAdd } from "react-icons/io5";
 import styles from "../styles/TeamManagement.module.scss";
+import type { ApiError } from "@/src/types/api";
+import type { OpenTeam } from "../../../types/team";
 
-const TeamlessState = ({ formId, eventTitle, maxTeamSize, onTeamJoined }) => {
+type TeamlessStateProps = {
+    formId: string;
+    eventTitle?: string;
+    maxTeamSize: number;
+    onTeamJoined: () => void;
+};
+
+const TeamlessState = ({ formId, eventTitle, maxTeamSize, onTeamJoined }: TeamlessStateProps) => {
     const [activeTab, setActiveTab] = useState("browse"); // "browse" | "create"
     const [searchQuery, setSearchQuery] = useState("");
-    const [teams, setTeams] = useState([]);
+    const [teams, setTeams] = useState<OpenTeam[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [newTeamName, setNewTeamName] = useState("");
     const [isCreating, setIsCreating] = useState(false);
-    const [sendingRequestTo, setSendingRequestTo] = useState(null);
-    const pollRef = useRef(null);
+    const [sendingRequestTo, setSendingRequestTo] = useState<string | null>(null);
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // Fetch teams on mount and when search changes
     const fetchTeams = useCallback(async (query = "") => {
@@ -126,7 +135,7 @@ const TeamlessState = ({ formId, eventTitle, maxTeamSize, onTeamJoined }) => {
                 onTeamJoined(); // Refresh parent
             }
         } catch (err) {
-            const msg = err.response?.data?.message || "Failed to create team";
+            const msg = (err as ApiError).response?.data?.message || "Failed to create team";
             Alert({ type: "error", message: msg, position: "top-right" });
         } finally {
             setIsCreating(false);
@@ -134,7 +143,7 @@ const TeamlessState = ({ formId, eventTitle, maxTeamSize, onTeamJoined }) => {
     };
 
     // Send join request handler
-    const handleSendRequest = async (teamRegId) => {
+    const handleSendRequest = async (teamRegId: string) => {
         setSendingRequestTo(teamRegId);
         try {
             const response = await api.post("/api/form/sendJoinRequest", {
@@ -152,7 +161,7 @@ const TeamlessState = ({ formId, eventTitle, maxTeamSize, onTeamJoined }) => {
                 fetchTeams(searchQuery);
             }
         } catch (err) {
-            const msg = err.response?.data?.message || "Failed to send join request";
+            const msg = (err as ApiError).response?.data?.message || "Failed to send join request";
             Alert({ type: "error", message: msg, position: "top-right" });
         } finally {
             setSendingRequestTo(null);

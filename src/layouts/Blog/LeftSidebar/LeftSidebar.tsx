@@ -4,6 +4,15 @@ import React from 'react';
 import styles from './styles/LeftSidebar.module.scss';
 import Input from '../../../components/Core/Input'; 
 
+type LeftSidebarProps = {
+  selectedDepartment: string | null;
+  onSelectDepartment: (department: string | null) => void;
+  sortOrder: string;
+  onSortOrderChange: (order: string) => void;
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+};
+
 function LeftSidebar({
   selectedDepartment,
   onSelectDepartment,
@@ -11,7 +20,7 @@ function LeftSidebar({
   onSortOrderChange,
   searchQuery,
   onSearchChange
-}) {
+}: LeftSidebarProps) {
   //departments function
   const departments = [
     "All Departments",

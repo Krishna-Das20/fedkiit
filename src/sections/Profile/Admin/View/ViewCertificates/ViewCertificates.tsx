@@ -7,14 +7,16 @@ import { api } from "../../../../../services";
 import { MicroLoading } from "../../../../../microInteraction";
 import AuthContext from "../../../../../context/AuthContext";
 import styles from "./styles/ViewCertificates.module.scss";
+import type { ApiError } from "@/src/types/api";
+import type { EventCertificates } from "@/src/types/certificate";
 
-const ViewCertificates = ({ eventId: propEventId } = {}) => {
+const ViewCertificates = ({ eventId: propEventId }: { eventId?: string } = {}) => {
   const authCtx = useContext(AuthContext);
-  const params = useParams();
+  const params = useParams<{ id?: string; eventId?: string; formId?: string }>();
   const routeEventId = params?.id ?? params?.eventId ?? params?.formId;
   const eventId = propEventId || routeEventId;
 
-  const [data, setData] = useState({
+  const [data, setData] = useState<EventCertificates>({
     event: null,
     template: null,
     certificates: [],
@@ -23,13 +25,15 @@ const ViewCertificates = ({ eventId: propEventId } = {}) => {
     totalTrash: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("ALL"); // ALL | MAILED | UNMAILED | TRASH
-  const [copiedId, setCopiedId] = useState(null);
-  const [copiedLinkId, setCopiedLinkId] = useState(null);
-  const [actionLoadingId, setActionLoadingId] = useState(null);
-  const [bulkActionLoading, setBulkActionLoading] = useState(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [bulkActionLoading, setBulkActionLoading] = useState<
+    "restoreAll" | "deleteAll" | null
+  >(null);
 
   useEffect(() => {
     if (!eventId) {
@@ -52,7 +56,7 @@ const ViewCertificates = ({ eventId: propEventId } = {}) => {
       } catch (err) {
         console.error("Failed to load event certificates:", err);
         if (isMounted) {
-          setError(err?.response?.data?.message || "Failed to load certificates.");
+          setError((err as ApiError)?.response?.data?.message || "Failed to load certificates.");
         }
       } finally {
         if (isMounted) setLoading(false);
@@ -65,13 +69,13 @@ const ViewCertificates = ({ eventId: propEventId } = {}) => {
     };
   }, [eventId]);
 
-  const handleCopyId = (certId) => {
+  const handleCopyId = (certId: string) => {
     navigator?.clipboard?.writeText(certId);
     setCopiedId(certId);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleCopyLink = (certId) => {
+  const handleCopyLink = (certId: string) => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const url = `${origin}/verify/certificate?id=${encodeURIComponent(certId)}`;
     navigator?.clipboard?.writeText(url);
@@ -80,7 +84,7 @@ const ViewCertificates = ({ eventId: propEventId } = {}) => {
   };
 
   // Move certificate to Trash (soft delete)
-  const handleTrash = async (certId, recipientName) => {
+  const handleTrash = async (certId: string, recipientName: string) => {
     if (
       !window.confirm(
         `Move certificate for "${recipientName || certId}" to trash? It will become invalid on verification until restored.`
@@ -103,12 +107,12 @@ const ViewCertificates = ({ eventId: propEventId } = {}) => {
     } catch (err) {
       console.error("Failed to move certificate to trash:", err);
       setData((prev) => ({ ...prev, certificates: previousCertificates }));
-      alert(err?.response?.data?.message || "Failed to move certificate to trash.");
+      alert((err as ApiError)?.response?.data?.message || "Failed to move certificate to trash.");
     }
   };
 
   // Restore certificate from Trash (un-delete)
-  const handleRestore = async (certId, recipientName) => {
+  const handleRestore = async (certId: string, recipientName: string) => {
     if (
       !window.confirm(
         `Restore certificate for "${recipientName || certId}"? It will become valid and verifiable again.`
@@ -134,12 +138,12 @@ const ViewCertificates = ({ eventId: propEventId } = {}) => {
     } catch (err) {
       console.error("Failed to restore certificate:", err);
       setData((prev) => ({ ...prev, certificates: previousCertificates }));
-      alert(err?.response?.data?.message || "Failed to restore certificate.");
+      alert((err as ApiError)?.response?.data?.message || "Failed to restore certificate.");
     }
   };
 
   // Permanently delete certificate from database
-  const handlePermanentDelete = async (certId, recipientName) => {
+  const handlePermanentDelete = async (certId: string, recipientName: string) => {
     if (
       !window.confirm(
         `Are you sure you want to permanently delete the certificate for "${recipientName || certId}" from the database? This action CANNOT be undone.`
@@ -162,7 +166,7 @@ const ViewCertificates = ({ eventId: propEventId } = {}) => {
     } catch (err) {
       console.error("Failed to permanently delete certificate:", err);
       setData((prev) => ({ ...prev, certificates: previousCertificates }));
-      alert(err?.response?.data?.message || "Failed to permanently delete certificate.");
+      alert((err as ApiError)?.response?.data?.message || "Failed to permanently delete certificate.");
     }
   };
 
@@ -199,7 +203,7 @@ const ViewCertificates = ({ eventId: propEventId } = {}) => {
     } catch (err) {
       console.error("Failed to restore all certificates:", err);
       setData((prev) => ({ ...prev, certificates: previousCertificates }));
-      alert(err?.response?.data?.message || "Failed to restore all certificates.");
+      alert((err as ApiError)?.response?.data?.message || "Failed to restore all certificates.");
     } finally {
       setBulkActionLoading(null);
     }
@@ -228,14 +232,15 @@ const ViewCertificates = ({ eventId: propEventId } = {}) => {
     setBulkActionLoading("deleteAll");
     try {
       await api.delete(
+        // Only reachable once certificates loaded, which needs an event id.
         `/api/certificate/eventCertificates?eventId=${encodeURIComponent(
-          eventId
+          eventId!
         )}&allTrash=true&permanent=true`
       );
     } catch (err) {
       console.error("Failed to delete all certificates:", err);
       setData((prev) => ({ ...prev, certificates: previousCertificates }));
-      alert(err?.response?.data?.message || "Failed to permanently delete all trashed certificates.");
+      alert((err as ApiError)?.response?.data?.message || "Failed to permanently delete all trashed certificates.");
     } finally {
       setBulkActionLoading(null);
     }

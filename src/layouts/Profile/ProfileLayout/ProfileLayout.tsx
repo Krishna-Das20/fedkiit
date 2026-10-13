@@ -3,7 +3,12 @@
 import React, { useEffect } from "react";
 import styles from "./styles/ProfileLayout.module.scss";
 
-const Layout = ({ children, title }) => {
+type LayoutProps = {
+  children: React.ReactNode;
+  title?: string;
+};
+
+const Layout = ({ children, title }: LayoutProps) => {
   useEffect(() => {
     document.title = title ? title + " | FED" : "FED KIIT";
   }, [title]);

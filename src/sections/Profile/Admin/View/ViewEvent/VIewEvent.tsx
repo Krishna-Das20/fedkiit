@@ -7,14 +7,14 @@ import { ComponentLoading } from "../../../../../microInteraction";
 import { api } from "../../../../../services";
 import AuthContext from "../../../../../context/AuthContext";
 import { useRouter } from "next/navigation";
+import type { FormRecord } from "../../../../../types/form";
 
-
-function ViewEvent({ handleChangePage }) {
+function ViewEvent({ handleChangePage }: { handleChangePage?: (page: string) => void }) {
   const [activePage, setActivePage] = useState("View Events");
-  const [pastEvents, setPastEvents] = useState([]);
-  const [ongoingEvents, setOngoingEvents] = useState([]);
+  const [pastEvents, setPastEvents] = useState<FormRecord[]>([]);
+  const [ongoingEvents, setOngoingEvents] = useState<FormRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<{ message: string } | null>(null);
   const [reload, setReload] = useState(false);
 
   const [selectedSection, setSelectedSection] = useState("ongoing");
@@ -27,9 +27,9 @@ function ViewEvent({ handleChangePage }) {
       try {
         const response = await api.get("/api/form/getAllForms");
         if (response.status === 200) {
-          const fetchedEvents = response.data.events;
+          const fetchedEvents: FormRecord[] = response.data.events;
           const sortedEvents = fetchedEvents.sort(
-            (a, b) => new Date(b.info.eventDate) - new Date(a.info.eventDate)
+            (a, b) => new Date(b.info.eventDate as string).getTime() - new Date(a.info.eventDate as string).getTime()
           );
           const ongoing = sortedEvents.filter(
             (event) => !event.info.isEventPast
@@ -48,7 +48,7 @@ function ViewEvent({ handleChangePage }) {
         });
         // const testEvents = FormData.events || [];
         // const sortedTestEvents = testEvents.sort(
-        //   (a, b) => new Date(b.info.eventDate) - new Date(a.info.eventDate)
+        //   (a, b) => new Date(b.info.eventDate).getTime() - new Date(a.info.eventDate).getTime()
         // );
         // const ongoing = sortedTestEvents.filter(
         //   (event) => !event.info.isEventPast
@@ -80,7 +80,8 @@ function ViewEvent({ handleChangePage }) {
   };
 
   const handleDeleteEvent = async () => {
-    const id = authCtx.eventData.id;
+    // EventCard sets eventData just before calling onDelete.
+    const id = authCtx.eventData!.id;
     try {
       const response = await api.delete(`/api/form/deleteForm/${id}`, {
         headers: {

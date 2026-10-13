@@ -1,12 +1,19 @@
 "use client";
 
 import React, { useState, useEffect, Children } from "react";
-import PropTypes from "prop-types";
 import { Blurhash } from "react-blurhash";
 import styles from "./styles/Carousel.module.scss";
 import CarouselSkeleton from "../../layouts/Skeleton/Carousel/Carousel";
 
-function Carousel({ children, images, customStyles = {}, showSkeleton = true }) {
+type CarouselProps = {
+  children?: React.ReactNode;
+  images?: { image: string; title: string }[];
+  /** Extra class names, keyed by the stylesheet class they add to. */
+  customStyles?: Record<string, string>;
+  showSkeleton?: boolean;
+};
+
+function Carousel({ children, images, customStyles = {}, showSkeleton = true }: CarouselProps) {
   const [current, setCurrent] = useState(0);
   const [autoPlay, setAutoPlay] = useState(true);
   const [isImageLoaded, setImageLoaded] = useState(false);
@@ -21,7 +28,7 @@ function Carousel({ children, images, customStyles = {}, showSkeleton = true }) 
   }, []);
 
   useEffect(() => {
-    let timeOut = null;
+    let timeOut: ReturnType<typeof setTimeout> | undefined;
     if (autoPlay && !isLoading) {
       timeOut = setTimeout(() => {
         slideRight();
@@ -111,17 +118,5 @@ function Carousel({ children, images, customStyles = {}, showSkeleton = true }) 
     </div>
   );
 }
-
-Carousel.propTypes = {
-  children: PropTypes.node,
-  images: PropTypes.arrayOf(
-    PropTypes.shape({
-      image: PropTypes.string.isRequired,
-      title: PropTypes.string.isRequired,
-    })
-  ),
-  customStyles: PropTypes.object,
-  showSkeleton: PropTypes.bool,
-};
 
 export default Carousel;

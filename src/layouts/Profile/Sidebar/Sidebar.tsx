@@ -21,7 +21,7 @@ import { EditImage } from "../../../features";
 import BorderGlow from "@/src/components/BorderGlow/BorderGlow";
 import styles from "./styles/Sidebar.module.scss";
 
-const getInitials = (name, email) => {
+const getInitials = (name?: string, email?: string) => {
   if (name && name.trim()) {
     const parts = name.trim().split(/\s+/);
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
@@ -33,13 +33,18 @@ const getInitials = (name, email) => {
   return "U";
 };
 
-const Sidebar = ({ activepage, handleChange }) => {
+type SidebarProps = {
+  activepage?: string;
+  handleChange?: (page: string) => void;
+};
+
+const Sidebar = ({ activepage, handleChange }: SidebarProps) => {
   const authCtx = useContext(AuthContext);
-  const [imagePrv, setImagePrv] = useState(null);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [imagePrv, setImagePrv] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const imgRef = useRef(null);
+  const imgRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -80,13 +85,13 @@ const Sidebar = ({ activepage, handleChange }) => {
     return "Profile";
   }, [activepage, pathname]);
 
-  const handleMenuClick = (page) => {
+  const handleMenuClick = (page: string) => {
     if (handleChange) {
       handleChange(page);
     }
     setIsMobileMenuOpen(false);
 
-    const pathMap = {
+    const pathMap: Record<string, string> = {
       Blogs: "/profile/BlogForm",
       Events: "/profile/events",
       events: "/profile/events",
@@ -108,7 +113,7 @@ const Sidebar = ({ activepage, handleChange }) => {
     authCtx.logout();
   };
 
-  const handleFileChange = (event) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       setSelectedFile(event.target.files[0]);
     }
@@ -118,8 +123,10 @@ const Sidebar = ({ activepage, handleChange }) => {
     setSelectedFile(null);
   };
 
-  const setImage = (url) => {
-    setImagePrv(url);
+  // EditImage hands back the uploaded File. It used to be stored as-is, so
+  // the fallback avatar below rendered src="[object File]"; show it instead.
+  const setImage = (file: File) => {
+    setImagePrv(URL.createObjectURL(file));
   };
 
   // Completion calculation (7 essential fields)

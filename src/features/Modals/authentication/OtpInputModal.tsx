@@ -4,7 +4,12 @@ import React from "react";
 import OtpInput from "../../../components/OtpInput/OtpInput";
 import { X } from "lucide-react";
 
-const OtpInputModal = (props) => {
+type OtpInputModalProps = {
+  onVerify: (otp: string) => void | Promise<void>;
+  handleClose: () => void;
+};
+
+const OtpInputModal = (props: OtpInputModalProps) => {
   const { onVerify, handleClose } = props;
   return (
     <div

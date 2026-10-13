@@ -10,12 +10,13 @@ import "aos/dist/aos.css";
 import { Alert, MicroLoading } from "../../../microInteraction";
 import { api } from "../../../services";
 import { YEAR_OPTIONS } from "../../../data/yearOptions";
+import type { AlertProps } from "@/src/microInteraction/Alert/Alert";
 
-const EditProfile = ({ handleModalClose }) => {
+const EditProfile = ({ handleModalClose }: { handleModalClose: () => void }) => {
   const authCtx = useContext(AuthContext);
-  const [alert, setAlert] = useState(null);
+  const [alert, setAlert] = useState<AlertProps | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [data, setData] = useState({
     name: authCtx.user.name,
@@ -40,7 +41,7 @@ const EditProfile = ({ handleModalClose }) => {
   }, []);
 
   const validate = () => {
-    const newErrors = {};
+    const newErrors: Record<string, string> = {};
     if (!data.rollNumber) newErrors.rollNumber = "Roll Number is required";
     if (!data.school) newErrors.school = "School is required";
     if (!data.college) newErrors.college = "college is required";
@@ -68,10 +69,13 @@ const EditProfile = ({ handleModalClose }) => {
 
     setIsLoading(true);
     try {
-      let { linkedin, github, ...modifiedData } = data;
-      modifiedData.extra = {
-        github: data.github,
-        linkedin: data.linkedin,
+      const { linkedin, github, ...details } = data;
+      const modifiedData = {
+        ...details,
+        extra: {
+          github: data.github,
+          linkedin: data.linkedin,
+        },
       };
 
       const response = await api.put("/api/user/editDetails", modifiedData, {
@@ -96,8 +100,10 @@ const EditProfile = ({ handleModalClose }) => {
           data.linkedin,
           authCtx.user.extra.designation,
           authCtx.user.access,
-          authCtx.user.editProfileCount - 1,
-          authCtx.user.regForm
+          Number(authCtx.user.editProfileCount) - 1,
+          authCtx.user.regForm,
+          authCtx.user.blurhash,
+          authCtx.user.token
         );
         setTimeout(() => {
           handleModalClose();

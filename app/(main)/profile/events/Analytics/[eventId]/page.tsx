@@ -22,7 +22,7 @@ import { getCurrentUser } from "@/lib/auth/access";
 import { canViewFormAnalytics } from "@/lib/auth/permissions";
 import EventStats from "@/src/features/Modals/Event/EventStats/EventStats";
 
-export default async function Page({ params }) {
+export default async function Page({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
   const user = await getCurrentUser();
 

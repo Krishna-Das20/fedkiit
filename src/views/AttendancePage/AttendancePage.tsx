@@ -16,41 +16,44 @@ import styles from "./styles/AttendancePage.module.scss";
 import { IoClose } from "react-icons/io5";
 import { FaDownload } from "react-icons/fa";
 import { showAlert, ComponentLoading } from "../../microInteraction";
+import type { ApiError } from "@/src/types/api";
+import type { FormRecord } from "@/src/types/form";
 
 const STATS_POLL_MS = 15000;
 const API_TIMEOUT_MS = 15000;
 
-function sortEvents(events) {
+function sortEvents(events: FormRecord[]) {
   return [...events].sort((a, b) => {
-    const priorityA = parseInt(a.info?.eventPriority ?? "99", 10);
-    const priorityB = parseInt(b.info?.eventPriority ?? "99", 10);
+    // parseInt stringifies its argument anyway; String() says so.
+    const priorityA = parseInt(String(a.info?.eventPriority ?? "99"), 10);
+    const priorityB = parseInt(String(b.info?.eventPriority ?? "99"), 10);
     const dateA = new Date(a.info?.eventDate ?? 0);
     const dateB = new Date(b.info?.eventDate ?? 0);
     const titleA = a.info?.eventTitle || "";
     const titleB = b.info?.eventTitle || "";
 
     if (priorityA !== priorityB) return priorityA - priorityB;
-    if (dateA.getTime() !== dateB.getTime()) return dateA - dateB;
+    if (dateA.getTime() !== dateB.getTime()) return dateA.getTime() - dateB.getTime();
     return titleA.localeCompare(titleB);
   });
 }
 
-function errorCode(error) {
-  const errors = error?.response?.data?.errors;
+function errorCode(error: unknown) {
+  const errors = (error as ApiError)?.response?.data?.errors;
   return Array.isArray(errors) ? errors[0]?.code : undefined;
 }
 
-function isNetworkError(error) {
-  return !error?.response && Boolean(error?.message);
+function isNetworkError(error: unknown) {
+  return !(error as ApiError)?.response && Boolean((error as Error | undefined)?.message);
 }
 
 const AttendancePage = () => {
-  const [ongoingEvents, setOngoingEvents] = useState([]);
-  const [pastEvents, setPastEvents] = useState([]);
+  const [ongoingEvents, setOngoingEvents] = useState<FormRecord[]>([]);
+  const [pastEvents, setPastEvents] = useState<FormRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
-  const [selectedEventId, setSelectedEventId] = useState(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedEventTitle, setSelectedEventTitle] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [eventStats, setEventStats] = useState({ registered: 0, present: 0 });
@@ -58,8 +61,8 @@ const AttendancePage = () => {
   const authCtx = useContext(AuthContext);
   const processingRef = useRef(false);
   const closingRef = useRef(false);
-  const html5QrRef = useRef(null);
-  const selectedEventIdRef = useRef(null);
+  const html5QrRef = useRef<Html5Qrcode | null>(null);
+  const selectedEventIdRef = useRef<string | null>(null);
   const showScannerRef = useRef(false);
   const authTokenRef = useRef(authCtx.token);
 
@@ -73,7 +76,7 @@ const AttendancePage = () => {
   );
 
   const fetchEventStats = useCallback(
-    async (eventId) => {
+    async (eventId: string | null) => {
       if (!eventId) return;
       try {
         const response = await api.get(`/api/form/attendance-stats/${eventId}`, {
@@ -108,8 +111,8 @@ const AttendancePage = () => {
               .filter((e) => e.info?.isEventPast)
               .sort(
                 (a, b) =>
-                  new Date(b.info?.eventDate ?? 0) -
-                  new Date(a.info?.eventDate ?? 0),
+                  new Date(b.info?.eventDate ?? 0).getTime() -
+                  new Date(a.info?.eventDate ?? 0).getTime(),
               ),
           );
         } else {
@@ -167,7 +170,7 @@ const AttendancePage = () => {
     closingRef.current = false;
   }, [stopScanner]);
 
-  const onScanSuccess = async (decodedText) => {
+  const onScanSuccess = async (decodedText: string) => {
     const token = decodedText?.trim();
     const eventId = selectedEventIdRef.current;
 
@@ -211,12 +214,12 @@ const AttendancePage = () => {
     } catch (err) {
       console.error("Error marking attendance:", err);
       const code = errorCode(err);
-      const apiMessage = err.response?.data?.message;
+      const apiMessage = (err as ApiError).response?.data?.message;
       let errorMessage = apiMessage || "Failed to verify QR code";
 
       if (isNetworkError(err)) {
         errorMessage = "Network error — check your connection and try again";
-      } else if (err.response?.status === 401) {
+      } else if ((err as ApiError).response?.status === 401) {
         if (apiMessage === "Token is required") {
           errorMessage = "Your session expired — please log in again";
           await closeScanner();
@@ -230,15 +233,15 @@ const AttendancePage = () => {
         errorMessage = "This QR belongs to a different event";
       } else if (code === "CONFLICT") {
         errorMessage = "Could not mark attendance — scan again";
-      } else if (err.response?.status === 403) {
+      } else if ((err as ApiError).response?.status === 403) {
         errorMessage = "You don't have permission to mark attendance";
-      } else if (err.response?.status === 404) {
+      } else if ((err as ApiError).response?.status === 404) {
         errorMessage = "Attendance record not found";
       }
 
       showAlert({
         type: "error",
-        id: `attendance-scan-error-${code || err.response?.status || "network"}`,
+        id: `attendance-scan-error-${code || (err as ApiError).response?.status || "network"}`,
         message: errorMessage,
         position: "top-right",
       });
@@ -311,7 +314,7 @@ const AttendancePage = () => {
     };
   }, [stopScanner]);
 
-  const handleScanQR = (event) => {
+  const handleScanQR = (event: FormRecord) => {
     if (!authTokenRef.current) {
       showAlert({
         type: "error",
@@ -329,7 +332,7 @@ const AttendancePage = () => {
     setShowScanner(true);
   };
 
-  const handleDownloadAttendance = async (eventId) => {
+  const handleDownloadAttendance = async (eventId: string) => {
     try {
       const response = await api.get(`/api/form/export-attendance/${eventId}`, {
         headers: authHeaders(),
@@ -355,18 +358,18 @@ const AttendancePage = () => {
       let errorMessage = "Failed to download attendance file";
       if (isNetworkError(err)) {
         errorMessage = "Network error — could not download file";
-      } else if (err.response?.status === 403) {
+      } else if ((err as ApiError).response?.status === 403) {
         errorMessage = "You don't have permission to download attendance data";
-      } else if (err.response?.status === 404) {
+      } else if ((err as ApiError).response?.status === 404) {
         errorMessage = "Attendance data not found for this event";
-      } else if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
+      } else if ((err as ApiError).response?.data?.message) {
+        errorMessage = (err as ApiError).response!.data.message!;
       }
       showAlert({ type: "error", message: errorMessage, position: "top-right" });
     }
   };
 
-  const renderOngoingActions = (event) => (
+  const renderOngoingActions = (event: FormRecord) => (
     <div className={styles.actionButtons}>
       <Button onClick={() => handleScanQR(event)} variant="primary">
         Scan QR
@@ -388,7 +391,7 @@ const AttendancePage = () => {
     </div>
   );
 
-  const renderPastActions = (event) => (
+  const renderPastActions = (event: FormRecord) => (
     <div className={styles.actionButtons}>
       <Button
         onClick={() => handleDownloadAttendance(event.id)}

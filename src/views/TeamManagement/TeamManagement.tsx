@@ -14,9 +14,11 @@ import styles from "./styles/TeamManagement.module.scss";
 import { IoArrowBack, IoCopyOutline, IoCheckmark } from "react-icons/io5";
 import { FiEdit2, FiCheck, FiX } from "react-icons/fi";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
+import type { TeamDetails, TeamlessDetails } from "../../types/team";
+import type { ApiError } from "@/src/types/api";
 
 const TeamManagement = () => {
-    const { eventId: formId } = useParams();
+    const { eventId: formId } = useParams<{ eventId: string }>();
     const router = useRouter();
     // Not `const [searchParams] = useSearchParams()`: that is React Router's
     // shape. Next returns a ReadonlyURLSearchParams directly, and because it is
@@ -26,11 +28,11 @@ const TeamManagement = () => {
     const searchParams = useSearchParams();
     const authCtx = useContext(AuthContext);
 
-    const [teamData, setTeamData] = useState(null);
+    const [teamData, setTeamData] = useState<TeamDetails | null>(null);
     const [isTeamless, setIsTeamless] = useState(false);
-    const [teamlessInfo, setTeamlessInfo] = useState(null);
+    const [teamlessInfo, setTeamlessInfo] = useState<TeamlessDetails | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState<string | null>(null);
 
     // Rename state
     const [isEditing, setIsEditing] = useState(false);
@@ -41,7 +43,13 @@ const TeamManagement = () => {
     const [codeCopied, setCodeCopied] = useState(false);
 
     // Confirm dialog state
-    const [confirmDialog, setConfirmDialog] = useState({
+    const [confirmDialog, setConfirmDialog] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        confirmText: string;
+        onConfirm: () => void | Promise<void>;
+    }>({
         isOpen: false,
         title: "",
         message: "",
@@ -59,7 +67,7 @@ const TeamManagement = () => {
         const name = searchParams.get("name");
         const reason = searchParams.get("reason");
         if (toast) {
-            const toastMessages = {
+            const toastMessages: Record<string, { type: string; message: string }> = {
                 joined: { type: "success", message: `${name || "User"} has been added to the team! 🎉` },
                 rejected: { type: "info", message: `${name || "User"}'s join request was declined.` },
                 expired: { type: "warning", message: "This request has expired." },
@@ -123,7 +131,7 @@ const TeamManagement = () => {
             }
         } catch (err) {
             console.error("Error fetching team details:", err);
-            const msg = err.response?.data?.message || "Failed to load team details";
+            const msg = (err as ApiError).response?.data?.message || "Failed to load team details";
             setError(msg);
         } finally {
             setIsLoading(false);
@@ -137,7 +145,7 @@ const TeamManagement = () => {
     // Copy team code
     const handleCopyCode = async () => {
         try {
-            await navigator.clipboard.writeText(teamData.teamCode);
+            await navigator.clipboard.writeText(teamData!.teamCode);
             setCodeCopied(true);
             setTimeout(() => setCodeCopied(false), 2000);
         } catch {
@@ -152,7 +160,7 @@ const TeamManagement = () => {
             Alert({ type: "error", message: "Team name cannot be empty", position: "top-right" });
             return;
         }
-        if (trimmed.toUpperCase() === teamData.teamName) {
+        if (trimmed.toUpperCase() === teamData!.teamName) {
             setIsEditing(false);
             return;
         }
@@ -169,7 +177,7 @@ const TeamManagement = () => {
                 fetchTeamDetails();
             }
         } catch (err) {
-            const msg = err.response?.data?.message || "Failed to rename team";
+            const msg = (err as ApiError).response?.data?.message || "Failed to rename team";
             Alert({ type: "error", message: msg, position: "top-right" });
         } finally {
             setRenameLoading(false);
@@ -177,20 +185,22 @@ const TeamManagement = () => {
     };
 
     const handleRenameCancel = () => {
-        setEditName(teamData.teamName);
+        setEditName(teamData!.teamName);
         setIsEditing(false);
     };
 
     // Leave team
     const handleLeaveTeam = () => {
-        const isSoloLeader = isLeader && teamData.teamSize === 1;
+        // The team view (and so this handler) only renders with team data.
+        const team = teamData!;
+        const isSoloLeader = isLeader && team.teamSize === 1;
 
         setConfirmDialog({
             isOpen: true,
             title: isSoloLeader ? "Dissolve Team" : "Leave Team",
             message: isSoloLeader
-                ? `Dissolve "${teamData.teamName}"? You'll remain registered but can create or join another team.`
-                : `Leave "${teamData.teamName}"? You'll remain registered and can create or join another team.`,
+                ? `Dissolve "${team.teamName}"? You'll remain registered but can create or join another team.`
+                : `Leave "${team.teamName}"? You'll remain registered and can create or join another team.`,
             confirmText: isSoloLeader ? "Dissolve Team" : "Leave Team",
             onConfirm: async () => {
                 try {
@@ -201,7 +211,7 @@ const TeamManagement = () => {
                         fetchTeamDetails();
                     }
                 } catch (err) {
-                    const msg = err.response?.data?.message || "Failed to leave team";
+                    const msg = (err as ApiError).response?.data?.message || "Failed to leave team";
                     Alert({ type: "error", message: msg, position: "top-right" });
                 }
                 setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
@@ -210,7 +220,7 @@ const TeamManagement = () => {
     };
 
     // Remove member
-    const handleRemoveMember = (memberEmail, memberName) => {
+    const handleRemoveMember = (memberEmail: string, memberName: string | null) => {
         setConfirmDialog({
             isOpen: true,
             title: "Remove Team Member",
@@ -224,7 +234,7 @@ const TeamManagement = () => {
                         fetchTeamDetails();
                     }
                 } catch (err) {
-                    const msg = err.response?.data?.message || "Failed to remove member";
+                    const msg = (err as ApiError).response?.data?.message || "Failed to remove member";
                     Alert({ type: "error", message: msg, position: "top-right" });
                 }
                 setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
@@ -233,7 +243,7 @@ const TeamManagement = () => {
     };
 
     // Invite email
-    const handleInviteEmail = async (inviteeEmail) => {
+    const handleInviteEmail = async (inviteeEmail: string) => {
         try {
             const response = await api.post("/api/form/inviteTeamMember", {
                 formId,
@@ -243,7 +253,7 @@ const TeamManagement = () => {
                 Alert({ type: "success", message: response.data.message, position: "top-right" });
             }
         } catch (err) {
-            const msg = err.response?.data?.message || "Failed to send invitation";
+            const msg = (err as ApiError).response?.data?.message || "Failed to send invitation";
             Alert({ type: "error", message: msg, position: "top-right" });
             throw err; // Re-throw to let InviteSection handle UI updates
         }
@@ -255,7 +265,7 @@ const TeamManagement = () => {
             const response = await api.get(`/api/form/inviteLink/${formId}`);
             return response.data?.data;
         } catch (err) {
-            const msg = err.response?.data?.message || "Failed to get invite link";
+            const msg = (err as ApiError).response?.data?.message || "Failed to get invite link";
             Alert({ type: "error", message: msg, position: "top-right" });
             return null;
         }

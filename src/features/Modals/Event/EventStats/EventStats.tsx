@@ -13,24 +13,45 @@ import styles from "../EventModal/styles/EventModal.module.scss";
 import sheet from "./styles/EventStats.module.scss";
 import AuthContext from "../../../../context/AuthContext";
 import { useRouter, useParams } from "next/navigation";
+import type { AlertProps } from "@/src/microInteraction/Alert/Alert";
+import type { ApiError } from "@/src/types/api";
+import type { EventInfo } from "@/lib/types/event";
 
-const EventStats = ({ onClosePath }) => {
+/** A form's registration tracker (its `formAnalytics` row). */
+type RegistrationTracker = {
+  regUserEmails?: string[];
+  regTeamNames?: string[];
+  totalRegistrationCount?: number;
+};
+
+/** One paid registration's proof, from /api/form/payments. */
+type PaymentProof = {
+  registrationId: string;
+  userEmail: string;
+  amount: string | number;
+  utr?: string | null;
+  screenshot?: string | null;
+};
+
+const EventStats = ({ onClosePath }: { onClosePath: string }) => {
   const router = useRouter();
   const authCtx = useContext(AuthContext);
-  const { eventId } = useParams();
-  const [info, setInfo] = useState({});
-  const [data, setData] = useState({});
-  const [year, setYear] = useState({});
+  const { eventId } = useParams<{ eventId: string }>();
+  const [info, setInfo] = useState<EventInfo>({});
+  // Starts as {}, then holds the form's formAnalytics array.
+  const [data, setData] = useState<RegistrationTracker[] | Record<string, never>>({});
+  // Registrations per year of study, e.g. { "2nd": 14 }.
+  const [year, setYear] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [alert, setAlert] = useState(null);
+  const [alert, setAlert] = useState<AlertProps | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [viewTeams, setViewTeams] = useState(false);
   // Payment proof, fetched separately and only for paid events — a free event
   // has no payment step, so the request would come back empty every time.
-  const [payments, setPayments] = useState([]);
+  const [payments, setPayments] = useState<PaymentProof[]>([]);
   const [isLoadingPayments, setIsLoadingPayments] = useState(false);
-  const [zoomedProof, setZoomedProof] = useState(null);
+  const [zoomedProof, setZoomedProof] = useState<string | null | undefined>(null);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -62,7 +83,7 @@ const EventStats = ({ onClosePath }) => {
         setAlert({
           type: "error",
           message:
-            error.response.data.message ||
+            (error as ApiError).response!.data.message ||
             "There was an error fetching event details. Please try again.",
           position: "bottom-right",
           duration: 3000,
@@ -152,7 +173,7 @@ const EventStats = ({ onClosePath }) => {
         link.setAttribute("download", `registration_data_${eventId}.csv`);
         document.body.appendChild(link);
         link.click();
-        link.parentNode.removeChild(link);
+        link.parentNode!.removeChild(link);
       } else {
         setAlert({
           type: "error",
@@ -167,7 +188,7 @@ const EventStats = ({ onClosePath }) => {
       setAlert({
         type: "error",
         message:
-          error.response.data.message ||
+          (error as ApiError).response!.data.message ||
           "There was an error downloading the file. Please try again.",
         position: "bottom-right",
         duration: 3000,
@@ -175,11 +196,14 @@ const EventStats = ({ onClosePath }) => {
     }
   };
 
-  const filteredUsers = data[0]?.regUserEmails?.filter((user) =>
+  // `data` is {} until the analytics load, where [0] is simply undefined.
+  const tracker = (data as RegistrationTracker[])[0];
+
+  const filteredUsers = tracker?.regUserEmails?.filter((user) =>
     user.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredTeams = data[0]?.regTeamNames?.filter((team) =>
+  const filteredTeams = tracker?.regTeamNames?.filter((team) =>
     team.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -309,8 +333,8 @@ const EventStats = ({ onClosePath }) => {
                               }}
                             >
                               {viewTeams
-                                ? data[0]?.regTeamNames?.length || 0
-                                : data[0]?.totalRegistrationCount || 0}
+                                ? tracker?.regTeamNames?.length || 0
+                                : tracker?.totalRegistrationCount || 0}
                             </span>
                           </Text>
                         </div>

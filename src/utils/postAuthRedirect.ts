@@ -18,7 +18,7 @@
  * the same rule `proxy.ts` applies to the value on its way out.
  */
 
-const isSafeInternalPath = (path) =>
+const isSafeInternalPath = (path: string | null): path is string =>
   typeof path === "string" && path.startsWith("/") && !path.startsWith("//");
 
 /**

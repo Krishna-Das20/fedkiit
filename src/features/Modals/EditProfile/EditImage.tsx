@@ -10,9 +10,23 @@ import { X } from "lucide-react";
 import { Alert, MicroLoading } from "../../../microInteraction";
 import { api } from "../../../services";
 import camera from "../../../assets/images/camera.svg";
+import type { AlertProps } from "@/src/microInteraction/Alert/Alert";
 // import { RecoveryContext } from '../../../context/RecoveryContext';
 
-const EditImage = (props) => {
+type EditImageProps = {
+  selectedFile: File;
+  closeModal: () => void;
+  /** Profile mode: receives the uploaded file once it is saved. */
+  setimage?: (image: File) => void;
+  /** True on the profile page, which uploads straight away. */
+  updatePfp?: boolean;
+  /** Member-form mode: receives a preview URL for the chosen photo. */
+  setimgprv?: (url: string) => void;
+  setFile: (file: File | null) => void;
+  fileName?: string | null;
+};
+
+const EditImage = (props: EditImageProps) => {
   const {
     selectedFile,
     closeModal,
@@ -23,11 +37,11 @@ const EditImage = (props) => {
     fileName,
   } = props;
   // const [scale, setScale] = useState(1);
-  const [errorMsg, setMsg] = useState(null);
-  const [alert, setAlert] = useState(null);
+  const [errorMsg, setMsg] = useState<string | null>(null);
+  const [alert, setAlert] = useState<AlertProps | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const authCtx = useContext(AuthContext);
-  const imgRef = useRef(null);
+  const imgRef = useRef<HTMLInputElement>(null);
 
   // const editorRef = useRef(null);
 
@@ -46,10 +60,10 @@ const EditImage = (props) => {
   const MAX_FILE_SIZE_MB = 0.70; // 750 KB
   const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
-  const checkFileSize = (file) => file.size <= MAX_FILE_SIZE_BYTES;
+  const checkFileSize = (file: File) => file.size <= MAX_FILE_SIZE_BYTES;
 
-  const handleFileChange = (event) => {
-    setFile(event.target.files[0]);
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setFile(event.target.files![0]);
     setMsg(null);
   };
 
@@ -105,10 +119,12 @@ const EditImage = (props) => {
                 authCtx.user?.extra?.designation || "",
                 authCtx.user.access,
                 authCtx.user.editProfileCount,
-                authCtx.user.regForm
+                authCtx.user.regForm,
+                authCtx.user.blurhash,
+                authCtx.user.token
               );
             }
-            setimage(selectedFile);
+            setimage!(selectedFile);
             // setimage(response.data.url)
             setAlert({
               type: "success",
@@ -171,7 +187,7 @@ const EditImage = (props) => {
       authCtx.croppedImageFile = selectedFile;
       // console.log("file stored in context:",authCtx.croppedImageFile);
       // console.log("selected file :", selectedFile);
-      setimgprv(URL.createObjectURL(selectedFile));
+      setimgprv!(URL.createObjectURL(selectedFile));
       closeModal();
       // }, "image/jpeg");
     }

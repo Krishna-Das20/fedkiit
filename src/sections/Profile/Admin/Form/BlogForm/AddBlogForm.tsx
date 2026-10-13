@@ -12,16 +12,20 @@ import { Alert } from "../../../../../microInteraction"; // MicroLoading is not 
 import { api } from "../../../../../services";
 import BlogCard from "../../../../../components/BlogCard/BlogCard";
 import geminiLogo from "../../../../../assets/images/geminiLogo.svg";
+import type { AlertProps } from "@/src/microInteraction/Alert/Alert";
+import type { ApiError } from "@/src/types/api";
+import type { BlogPost } from "@/src/types/blog";
+import { format } from "date-fns";
 
 function NewBlogForm() {
   // refs and state management
   const scrollRef = useRef(null); // This ref is declared but not used
   const [isVisibility, setisVisibility] = useState(false);
   const authCtx = useContext(AuthContext); // This context is declared but not used
-  const [alert, setAlert] = useState(null);
+  const [alert, setAlert] = useState<AlertProps | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isEditing, setisEditing] = useState(false);
-  const [blogs, setBlogs] = useState([]);
+  const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [loadingBlogs, setLoadingBlogs] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [visibilityFilter, setVisibilityFilter] = useState("all");
@@ -30,7 +34,23 @@ function NewBlogForm() {
   const [autoFillAnimated, setAutoFillAnimated] = useState(false);
 
   // form data state
-  const [data, setdata] = useState({
+  const [data, setdata] = useState<{
+    _id?: string;
+    blogTitle: string;
+    blogSubtitle: string;
+    metaDescription: string;
+    /** An image URL, or the File picked with the paperclip. */
+    image: string | File;
+    /** YYYY-MM-DD. */
+    blogDate: string;
+    blogAuthor: string;
+    mediumLink: string;
+    blogCategory: string;
+    blogTags: string[];
+    isPublished: boolean;
+    isFeatured: boolean;
+    isCommentEnabled: boolean;
+  }>({
     _id: nanoid(),
     blogTitle: "",
     blogSubtitle: "",
@@ -46,7 +66,7 @@ function NewBlogForm() {
     isCommentEnabled: true,
   });
 
-  const fileInputRef = useRef();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // alert effect
   useEffect(() => {
@@ -68,7 +88,7 @@ function NewBlogForm() {
   }, []);
 
   // image validation utilities (not directly used in validation logic but good to keep)
-  const isValidImage = (img) => {
+  const isValidImage = (img: unknown) => {
     if (img instanceof File) return true;
     if (typeof img === 'string') {
       return /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|svg)$/i.test(img);
@@ -76,7 +96,7 @@ function NewBlogForm() {
     return false;
   };
 
-  const isValidImageUrl = (url) => {
+  const isValidImageUrl = (url: string) => {
     return /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(url);
   };
 
@@ -179,7 +199,7 @@ function NewBlogForm() {
   };
 
   // handle edit blog
-  const handleEditBlog = (blog) => {
+  const handleEditBlog = (blog: BlogPost) => {
     console.log("Edit blog clicked with data:", blog);
     setisEditing(true);
 
@@ -268,7 +288,7 @@ function NewBlogForm() {
   };
 
   // handle delete blog
-  const handleDeleteBlog = async (blogId) => {
+  const handleDeleteBlog = async (blogId: string | undefined) => {
     if (!confirm("Are you sure you want to delete this blog?")) return;
 
     try {
@@ -292,7 +312,7 @@ function NewBlogForm() {
       console.error("Error deleting blog:", error);
       setAlert({
         type: "error",
-        message: error.response?.data?.message || "Failed to delete blog. Please try again.",
+        message: (error as ApiError).response?.data?.message || "Failed to delete blog. Please try again.",
         position: "bottom-right",
         duration: 3000,
       });
@@ -302,7 +322,7 @@ function NewBlogForm() {
   };
 
   // handle view blog
-  const handleViewBlog = (blogLink) => {
+  const handleViewBlog = (blogLink: string | undefined) => {
     if (blogLink) {
       window.open(blogLink, '_blank');
     } else {
@@ -360,7 +380,7 @@ function NewBlogForm() {
 
 
       console.log("Form data being prepared:");
-      for (let [key, value] of form.entries()) {
+      for (const [key, value] of form.entries()) {
         console.log(key, value);
       }
 
@@ -468,7 +488,7 @@ function NewBlogForm() {
         console.error("Error saving/updating blog:", error);
         setAlert({
           type: "error",
-          message: error.response?.data?.message || "There was an error with the blog operation. Please try again.",
+          message: (error as ApiError).response?.data?.message || "There was an error with the blog operation. Please try again.",
           position: "bottom-right",
           duration: 3000,
         });
@@ -588,14 +608,14 @@ function NewBlogForm() {
   };
 
   // image handling functions
-  const handleImageChange = (e) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files && e.target.files[0];
     if (file) {
       setdata({ ...data, image: file });
     }
   };
 
-  const handleImageUrlChange = (e) => {
+  const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setdata({ ...data, image: e.target.value });
   };
 
@@ -807,7 +827,15 @@ function NewBlogForm() {
               type="date"
               style={{ width: "88%" }}
               value={data.blogDate}
-              onChange={(e) => setdata({ ...data, blogDate: e.target.value })} 
+              // The date picker hands over a Date. This read `e.target.value`,
+              // which threw, so the publication date could never be changed
+              // from today's. Kept as YYYY-MM-DD in local time, as before.
+              onChange={(date) =>
+                setdata({
+                  ...data,
+                  blogDate: date ? format(date as Date, "yyyy-MM-dd") : "",
+                })
+              }
             />
             <Input
               placeholder="Enter Author Name"

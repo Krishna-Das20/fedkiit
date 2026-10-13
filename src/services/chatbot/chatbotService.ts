@@ -7,6 +7,10 @@
  */
 
 import { api } from '../index';
+import type { ApiError } from '../../types/api';
+
+/** One earlier turn, sent along so the reply has context. */
+export type ChatHistoryItem = { role: string; text: string };
 
 /**
  * Chatbot API Service
@@ -19,7 +23,10 @@ const chatbotService = {
      * @param {Array} conversationHistory - Optional conversation history for context
      * @returns {Promise<Object>} Response object
      */
-    sendMessage: async (message, conversationHistory = []) => {
+    sendMessage: async (
+        message: string,
+        conversationHistory: ChatHistoryItem[] = []
+    ) => {
         try {
             const response = await api.post('/api/chatbot/message', {
                 message,
@@ -29,7 +36,8 @@ const chatbotService = {
             });
 
             return response.data;
-        } catch (error) {
+        } catch (caught) {
+            const error = caught as ApiError;
             console.error('[Chatbot Service] Error:', error);
 
             // Handle auth required response
@@ -61,7 +69,7 @@ const chatbotService = {
             console.error('[Chatbot Service] Health check failed:', error);
             return {
                 status: 'unhealthy',
-                error: error.message
+                error: (error as Error).message
             };
         }
     },
@@ -73,7 +81,11 @@ const chatbotService = {
      * @param {string} senderEmail - Optional sender email
      * @returns {Promise<Object>} Response object
      */
-    sendEmail: async (content, senderName = null, senderEmail = null) => {
+    sendEmail: async (
+        content: string,
+        senderName: string | null = null,
+        senderEmail: string | null = null
+    ) => {
         try {
             const response = await api.post('/api/chatbot/send-email', {
                 content,

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useContext, useState, useEffect, useRef } from "react";
-import PropTypes from "prop-types";
 import { FaLinkedin, FaGithub } from "react-icons/fa";
 import { Blurhash } from "react-blurhash";
 import { cdn } from "../../utils/cloudinary";
@@ -9,6 +8,16 @@ import styles from "./styles/TeamCard.module.scss";
 import TeamCardSkeleton from "../../layouts/Skeleton/TeamCard/TeamCard";
 import { Button } from "../Core";
 import AuthContext from "../../context/AuthContext";
+import type { Member, MemberExtra } from "../../types/member";
+
+type TeamCardProps = {
+  member: Member;
+  blurhash?: string;
+  /** Extra class names, keyed by the stylesheet class they add to. */
+  customStyles?: Record<string, string>;
+  onUpdate?: () => void;
+  onRemove?: () => void;
+};
 
 const TeamCard = ({
   member,
@@ -16,15 +25,15 @@ const TeamCard = ({
   customStyles = {},
   onUpdate,
   onRemove,
-}) => {
+}: TeamCardProps) => {
   const [showMore, setShowMore] = useState(false);
   const [contentLoaded, setContentLoaded] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(true);
-  const imgRef = useRef(null);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   const rawExtra = member?.extra;
-  let parsedExtra = {};
+  let parsedExtra: MemberExtra = {};
   if (typeof rawExtra === "string") {
     try {
       parsedExtra = JSON.parse(rawExtra);
@@ -59,7 +68,7 @@ const TeamCard = ({
   const authCtx = useContext(AuthContext);
 
   const isDirectorRole =
-    ["PRESIDENT", "VICEPRESIDENT"].includes(member?.access) ||
+    ["PRESIDENT", "VICEPRESIDENT"].includes(member?.access ?? "") ||
     member?.access?.startsWith("DIRECTOR_");
 
   const handleImageLoad = () => {
@@ -70,7 +79,7 @@ const TeamCard = ({
     setIsImageLoaded(false);
   };
 
-  const handleLink = (url) => {
+  const handleLink = (url: string | undefined) => {
     const trimmed = (url || "").trim();
     if (/^https?:\/\//i.test(trimmed)) {
       return trimmed;
@@ -90,7 +99,7 @@ const TeamCard = ({
 
   //for name overflow
 
-  const nameRef = useRef(null);
+  const nameRef = useRef<HTMLHeadingElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
 
   useEffect(() => {
@@ -267,22 +276,6 @@ const TeamCard = ({
       </div>
     </div>
   );
-};
-
-TeamCard.propTypes = {
-  name: PropTypes.string.isRequired,
-  image: PropTypes.string.isRequired,
-  social: PropTypes.shape({
-    linkedin: PropTypes.string,
-    github: PropTypes.string,
-  }).isRequired,
-  title: PropTypes.string.isRequired,
-  role: PropTypes.string.isRequired,
-  know: PropTypes.string.isRequired,
-  blurhash: PropTypes.string, // Add this line
-  customStyles: PropTypes.object,
-  onUpdate: PropTypes.func.isRequired,
-  onRemove: PropTypes.func.isRequired,
 };
 
 export default TeamCard;

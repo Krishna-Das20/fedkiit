@@ -1,9 +1,17 @@
 "use client";
 
-import PropTypes from "prop-types";
+import type { CSSProperties, HTMLAttributes, ReactNode } from "react";
 import styles from "./styles/Core.module.scss";
 
-const Text = (props) => {
+type TextProps = Omit<HTMLAttributes<HTMLDivElement>, "style" | "type"> & {
+  children: ReactNode;
+  className?: string;
+  variant?: "primary" | "secondary";
+  type?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "p" | "body2";
+  style?: CSSProperties;
+};
+
+const Text = (props: TextProps) => {
   const {
     children,
     // Defaults to "" for the same reason as Input: it is interpolated into a
@@ -42,7 +50,7 @@ const Text = (props) => {
     }
   };
 
-  const inlineStyle = {
+  const inlineStyle: CSSProperties = {
     color: variant === "primary" ? "#fff" : "#FF8A00",
     ...style,
   };
@@ -64,15 +72,6 @@ const Text = (props) => {
       {children}
     </div>
   );
-};
-
-Text.propTypes = {
-  children: PropTypes.node.isRequired,
-  className: PropTypes.string,
-  variant: PropTypes.oneOf(["primary", "secondary"]),
-  type: PropTypes.oneOf(["h1", "h2", "h3", "h4", "h5", "h6", "p", "body2"]),
-  style: PropTypes.object,
-  onClick: PropTypes.func,
 };
 
 export default Text;

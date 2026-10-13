@@ -62,7 +62,17 @@ const SOCIAL = [
   },
 ];
 
-function Column({ title, links, isOmega }) {
+type FooterLink = { label: string; href: string; external?: boolean };
+
+function Column({
+  title,
+  links,
+  isOmega,
+}: {
+  title: string;
+  links: FooterLink[];
+  isOmega?: boolean;
+}) {
   return (
     <div className={styles.column}>
       <h4 className={styles.columnTitle}>{title}</h4>

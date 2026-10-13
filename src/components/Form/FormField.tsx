@@ -1,6 +1,5 @@
 "use client";
 
-import PropTypes from "prop-types";
 import styles from "./styles/Form.module.scss";
 import Input from "../Core/Input";
 import { MdOutlineClose } from "react-icons/md";
@@ -10,6 +9,12 @@ import PopField from "./PopField";
 import Switch from "react-switch";
 import { getOutboundList } from "../../sections/Profile/Admin/Form/NewForm/NewForm";
 import { nanoid } from "nanoid";
+import type {
+  FieldValidation,
+  FormFieldDef,
+  FormSection,
+  SectionRule,
+} from "../../types/form";
 
 const hasOptions = ["radio", "checkbox", "select"];
 
@@ -60,7 +65,26 @@ const fieldTypes = [
   // },
 ];
 
-function FormField(props) {
+/** The field properties the builder edits from this row. */
+type EditableProperty = "name" | "type" | "value" | "isRequired";
+
+type FormFieldProps = {
+  field: FormFieldDef;
+  section: FormSection;
+  sections: FormSection[];
+  setformFields: (fields: FormFieldDef[], property: EditableProperty) => void;
+  onRemoveField: () => void;
+  onFieldValidationChange: (
+    value: string,
+    property: keyof FieldValidation,
+    field: FormFieldDef,
+    validationId: string,
+  ) => void;
+  addNewValidation: (field: FormFieldDef) => void;
+  onRemoveValidation: (field: FormFieldDef, validationId: string) => void;
+};
+
+function FormField(props: FormFieldProps) {
   const {
     field,
     section,
@@ -74,7 +98,11 @@ function FormField(props) {
   const [showPopMenu, setshowPopMenu] = useState(false);
   const showMenu = field.type && field.value;
 
-  const handleChangeValue = (value, property) => {
+  const handleChangeValue = (
+    // A File only arrives from the (disabled) file picker of the value input.
+    value: string | boolean | File,
+    property: EditableProperty,
+  ) => {
     const newFields = [...section.fields];
     const fieldIndex = newFields.findIndex((fld) => fld._id === field?._id);
 
@@ -83,20 +111,16 @@ function FormField(props) {
       return;
     }
 
-    newFields[fieldIndex][property] = value;
-
-    const values =
-      typeof value !== "object"
-        ? property === "isRequired"
-          ? value
-          : value
-              .split(",")
-              .map((val) => val.trim())
-              .filter(Boolean)
-        : [];
+    Object.assign(newFields[fieldIndex], { [property]: value });
 
     if (property === "value") {
-      const fieldValidation = {
+      // Only a "value" edit reads the option list, and its value is a string.
+      const values = String(value)
+        .split(",")
+        .map((val) => val.trim())
+        .filter(Boolean);
+
+      const fieldValidation: FieldValidation = {
         _id: nanoid(),
         type: "length",
         value: values.length > 1 ? 1 : 50,
@@ -114,7 +138,7 @@ function FormField(props) {
           section._id
         );
 
-        let secValidations = [...section.validations];
+        let secValidations: SectionRule[] = [...section.validations];
 
         if (hasOptions.includes(field.type)) {
           secValidations = secValidations.filter(
@@ -145,9 +169,9 @@ function FormField(props) {
         values: null,
       };
       section.validations =
-        (section?.validations[0] === undefined
+        section?.validations[0] === undefined
           ? [secValidations]
-          : [section.validations[0]]) || [];
+          : [section.validations[0]];
     }
 
     setformFields(newFields, property);
@@ -178,7 +202,10 @@ function FormField(props) {
         />
         <Input
           value={
-            typeof field.value === "object" ? field.value?.name : field.value
+            // An uploaded File shows its name; the builder otherwise holds text.
+            typeof field.value === "object"
+              ? (field.value as File | null)?.name
+              : field.value
           }
           name="Field_Value"
           placeholder="Enter Value"
@@ -262,45 +289,5 @@ function FormField(props) {
     </>
   );
 }
-
-// FormField.propTypes = {
-//   field: PropTypes.shape({
-//     _id: PropTypes.number.isRequired,
-//     name: PropTypes.string.isRequired,
-//     type: PropTypes.oneOf([
-//       "text",
-//       "number",
-//       "radio",
-//       "checkbox",
-//       "select",
-//       "date",
-//       "file",
-//       "email",
-//       "url",
-//       "tel",
-//       "image",
-//     ]).isRequired,
-//     value: PropTypes.string.isRequired,
-//     isRequired: PropTypes.bool.isRequired,
-//     validations: PropTypes.arrayOf(
-//       PropTypes.shape({
-//         _id: PropTypes.number.isRequired,
-//         condition: PropTypes.string.isRequired,
-//         target: PropTypes.string.isRequired,
-//       })
-//     ).isRequired,
-//   }).isRequired,
-//   lastField: PropTypes.object,
-//   section: PropTypes.shape({
-//     _id: PropTypes.number.isRequired,
-//     fields: PropTypes.array.isRequired,
-//   }).isRequired,
-//   setformFields: PropTypes.func.isRequired,
-//   onRemoveField: PropTypes.func.isRequired,
-//   sections: PropTypes.array.isRequired,
-//   onFieldValidationChange: PropTypes.func.isRequired,
-//   addNewValidation: PropTypes.func.isRequired,
-//   onRemoveValidation: PropTypes.func.isRequired,
-// };
 
 export default FormField;

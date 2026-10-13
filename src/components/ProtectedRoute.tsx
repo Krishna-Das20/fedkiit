@@ -14,7 +14,7 @@ import { Alert, Loading } from "../microInteraction";
  * effect rather than during render, because calling `router.replace` while
  * rendering is not allowed in the App Router.
  */
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const authCtx = useContext(AuthContext);
   const router = useRouter();
   const pathname = usePathname();

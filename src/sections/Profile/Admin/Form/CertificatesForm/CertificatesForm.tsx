@@ -9,30 +9,36 @@ import { getCertificatePreview } from "./tools/certificateTools";
 import { Alert, MicroLoading } from "../../../../../microInteraction";
 import AuthContext from "../../../../../context/AuthContext";
 import styles from "./styles/CertificatesForm.module.scss";
+import type { AlertProps } from "@/src/microInteraction/Alert/Alert";
+import type { ApiError } from "@/src/types/api";
+import type { CertificateField } from "@/src/types/certificate";
 
-const CertificatesForm = ({ eventId: propEventId } = {}) => {
+type NumericKey = "x" | "y" | "fontSize";
+
+const CertificatesForm = ({ eventId: propEventId }: { eventId?: string } = {}) => {
   const authCtx = useContext(AuthContext);
-  const params = useParams();
+  const params = useParams<{ id?: string; eventId?: string; formId?: string }>();
   const routeEventId = params?.id ?? params?.eventId ?? params?.formId;
   const eventId = propEventId || routeEventId;
 
-  const [certificate, setCertificate] = useState(null);
-  const [certificateFile, setCertificateFile] = useState(null);
-  const [fields, setFields] = useState([]);
+  // The uploaded template as a data URL.
+  const [certificate, setCertificate] = useState<string | null>(null);
+  const [certificateFile, setCertificateFile] = useState<File | null>(null);
+  const [fields, setFields] = useState<CertificateField[]>([]);
   const [loading, setLoading] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
-  const [alert, setAlert] = useState(null);
+  const [alert, setAlert] = useState<AlertProps | null>(null);
   const [responseImg, setResponseImg] = useState("");
-  const [selectedFieldIndex, setSelectedFieldIndex] = useState(null);
-  const [draggingIndex, setDraggingIndex] = useState(null);
+  const [selectedFieldIndex, setSelectedFieldIndex] = useState<number | null>(null);
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
-  const [templateAspectRatio, setTemplateAspectRatio] = useState(null);
+  const [templateAspectRatio, setTemplateAspectRatio] = useState<number | null>(null);
   const [canvasWidth, setCanvasWidth] = useState(800);
   const [allExpanded, setAllExpanded] = useState(false);
 
-  const canvasRef = useRef(null);
-  const cardRefs = useRef([]);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const SendCertificatePath = "/profile/events/SendCertificate";
 
   useEffect(() => {
@@ -91,7 +97,7 @@ const CertificatesForm = ({ eventId: propEventId } = {}) => {
           setResponseImg(response.data.template);
           if (Array.isArray(response.data.fields) && response.data.fields.length > 0) {
             setFields(
-              response.data.fields.map((f) => ({
+              response.data.fields.map((f: Partial<CertificateField>) => ({
                 fieldName: f.fieldName || "Name",
                 x: Number(f.x ?? 50),
                 y: Number(f.y ?? 50),
@@ -136,13 +142,13 @@ const CertificatesForm = ({ eventId: propEventId } = {}) => {
 
   // Touch and Mouse Drag Handler (Mobile + Desktop friendly)
   const handlePointerMove = useCallback(
-    (e) => {
+    (e: MouseEvent | TouchEvent) => {
       if (draggingIndex === null || !canvasRef.current) return;
       const rect = canvasRef.current.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return;
 
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+      const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
 
       const rawX = ((clientX - rect.left) / rect.width) * 100;
       const rawY = ((clientY - rect.top) / rect.height) * 100;
@@ -184,8 +190,8 @@ const CertificatesForm = ({ eventId: propEventId } = {}) => {
     }
   }, [draggingIndex, handlePointerMove, handlePointerUp]);
 
-  const handleCertificateChange = (e) => {
-    const file = e.target.files[0];
+  const handleCertificateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files![0];
     if (file) {
       if (!file.type.startsWith("image/")) {
         setAlert({
@@ -198,7 +204,8 @@ const CertificatesForm = ({ eventId: propEventId } = {}) => {
       }
       const reader = new FileReader();
       reader.onload = (event) => {
-        const rawResult = event.target?.result;
+        // readAsDataURL below, so the result is the data URL string.
+        const rawResult = event.target?.result as string;
         const img = new Image();
         img.onload = () => {
           const maxDim = 2400;
@@ -221,7 +228,7 @@ const CertificatesForm = ({ eventId: propEventId } = {}) => {
             const canvas = document.createElement("canvas");
             canvas.width = width;
             canvas.height = height;
-            const ctx = canvas.getContext("2d");
+            const ctx = canvas.getContext("2d")!;
             ctx.drawImage(img, 0, 0, width, height);
 
             const format = file.type === "image/png" ? "image/png" : "image/jpeg";
@@ -263,13 +270,17 @@ const CertificatesForm = ({ eventId: propEventId } = {}) => {
     }
   };
 
-  const handleFieldChange = (index, key, value) => {
+  const handleFieldChange = <K extends keyof CertificateField>(
+    index: number,
+    key: K,
+    value: CertificateField[K]
+  ) => {
     const updatedFields = [...fields];
     updatedFields[index] = { ...updatedFields[index], [key]: value };
     setFields(updatedFields);
   };
 
-  const handleNumericFieldChange = (index, key, rawValue) => {
+  const handleNumericFieldChange = (index: number, key: NumericKey, rawValue: string) => {
     if (rawValue === "") {
       handleFieldChange(index, key, "");
       return;
@@ -282,7 +293,7 @@ const CertificatesForm = ({ eventId: propEventId } = {}) => {
     }
   };
 
-  const handleNumericBlur = (index, key, min = 0, max = 100, defaultVal = 0) => {
+  const handleNumericBlur = (index: number, key: NumericKey, min = 0, max = 100, defaultVal = 0) => {
     const val = fields[index]?.[key];
     if (val === "" || val === undefined || isNaN(Number(val))) {
       handleFieldChange(index, key, defaultVal);
@@ -292,7 +303,7 @@ const CertificatesForm = ({ eventId: propEventId } = {}) => {
     }
   };
 
-  const addNewField = (name) => {
+  const addNewField = (name?: string) => {
     const defaultName =
       name ||
       (fields.length === 0 || !fields.some((f) => f.fieldName?.toLowerCase() === "name")
@@ -333,7 +344,7 @@ const CertificatesForm = ({ eventId: propEventId } = {}) => {
     }
   };
 
-  const handleToggleExpand = (index) => {
+  const handleToggleExpand = (index: number) => {
     if (allExpanded) {
       handleFieldChange(index, "minimized", !fields[index]?.minimized);
     } else {
@@ -346,11 +357,11 @@ const CertificatesForm = ({ eventId: propEventId } = {}) => {
     }
   };
 
-  const removeField = (index) => {
+  const removeField = (index: number) => {
     setFields(fields.filter((_, i) => i !== index));
     if (selectedFieldIndex === index) {
       setSelectedFieldIndex(null);
-    } else if (selectedFieldIndex > index) {
+    } else if (selectedFieldIndex !== null && selectedFieldIndex > index) {
       setSelectedFieldIndex(selectedFieldIndex - 1);
     }
     setAlert({
@@ -389,7 +400,7 @@ const CertificatesForm = ({ eventId: propEventId } = {}) => {
     } catch (error) {
       setAlert({
         type: "error",
-        message: error?.message || "Failed to fetch template.",
+        message: (error as Error)?.message || "Failed to fetch template.",
         position: "top-right",
         duration: 3000,
       });
@@ -452,7 +463,7 @@ const CertificatesForm = ({ eventId: propEventId } = {}) => {
       setAlert({
         type: "error",
         message:
-          error.response?.data?.message || "Error saving certificate template. Please try again.",
+          (error as ApiError).response?.data?.message || "Error saving certificate template. Please try again.",
         position: "top-right",
         duration: 3000,
       });
@@ -509,8 +520,9 @@ const CertificatesForm = ({ eventId: propEventId } = {}) => {
                     alt="Certificate Template"
                     className={styles.templateImage}
                     onLoad={(e) => {
-                      if (e.target.naturalWidth && e.target.naturalHeight) {
-                        setTemplateAspectRatio(e.target.naturalWidth / e.target.naturalHeight);
+                      const img = e.currentTarget;
+                      if (img.naturalWidth && img.naturalHeight) {
+                        setTemplateAspectRatio(img.naturalWidth / img.naturalHeight);
                       }
                     }}
                   />
@@ -745,7 +757,9 @@ const CertificatesForm = ({ eventId: propEventId } = {}) => {
                   return (
                     <div
                       key={index}
-                      ref={(el) => (cardRefs.current[index] = el)}
+                      ref={(el) => {
+                        cardRefs.current[index] = el;
+                      }}
                       onClick={() => {
                         setSelectedFieldIndex(index);
                         if (field.minimized) {
@@ -953,7 +967,7 @@ const CertificatesForm = ({ eventId: propEventId } = {}) => {
                               <div
                                 className={styles.colorPickerWrap}
                                 onClick={(e) => {
-                                  const input = e.currentTarget.querySelector('input[type="color"]');
+                                  const input = e.currentTarget.querySelector<HTMLInputElement>('input[type="color"]');
                                   if (input && e.target !== input) {
                                     input.click();
                                   }

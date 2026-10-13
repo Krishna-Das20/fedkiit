@@ -19,7 +19,7 @@ import { ComponentLoading, Alert } from "../../../../microInteraction";
 import BorderGlow from "@/src/components/BorderGlow/BorderGlow";
 import styles from "./styles/ProfileView.module.scss";
 
-const formatUrl = (url) => {
+const formatUrl = (url: string | undefined) => {
   const trimmed = (url || "").trim();
   if (/^https?:\/\//i.test(trimmed)) {
     return trimmed;
@@ -48,10 +48,16 @@ const ProfileView = () => {
       authCtx.user.extra?.designation,
       authCtx.user.access,
       authCtx.user.editProfileCount,
-      authCtx.user.regForm
+      authCtx.user.regForm,
+      // blurhash and token were left off, which blanked both on every open.
+      authCtx.user.blurhash,
+      authCtx.user.token
     );
 
-    if (authCtx.user.access !== "USER" || authCtx.user.editProfileCount > 0) {
+    if (
+      authCtx.user.access !== "USER" ||
+      Number(authCtx.user.editProfileCount) > 0
+    ) {
       setIsOpen(true);
     } else {
       Alert({

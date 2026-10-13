@@ -8,11 +8,12 @@ import { EventCard } from "../../components";
 import { api } from "../../services";
 import { ComponentLoading } from "../../microInteraction";
 import Link from "next/link";
+import type { FormRecord } from "../../types/form";
 
 const PastEvent = () => {
-  const [pastEvents, setPastEvents] = useState([]);
+  const [pastEvents, setPastEvents] = useState<FormRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<{ message: string } | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -21,11 +22,11 @@ const PastEvent = () => {
       try {
         const response = await api.get("/api/form/getAllForms");
         if (response.status === 200) {
-          const allEvents = response.data.events;
+          const allEvents: FormRecord[] = response.data.events;
           // Filter and sort past events
           const sortedPastEvents = allEvents
             .filter((event) => event.info.isEventPast)
-            .sort((a, b) => new Date(b.info.eventDate) - new Date(a.info.eventDate));
+            .sort((a, b) => new Date(b.info.eventDate as string).getTime() - new Date(a.info.eventDate as string).getTime());
           setPastEvents(sortedPastEvents);
         } else {
           setError({

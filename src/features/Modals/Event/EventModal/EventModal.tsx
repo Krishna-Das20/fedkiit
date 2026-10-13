@@ -1,6 +1,5 @@
 "use client";
 
-/* eslint-disable react/prop-types */
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useContext } from "react";
 import EventCardModal from "./styles/EventModal.module.scss";
@@ -38,25 +37,29 @@ import {
 } from "../../../../utils/batchRestriction";
 import eventDefaultImg from "../../../../assets/images/defaultEventModal.png";
 import { useRouter, useParams } from "next/navigation";
+import type { AlertProps } from "@/src/microInteraction/Alert/Alert";
+import type { EventInfo } from "@/lib/types/event";
+import type { FormRecord } from "@/src/types/form";
 
-const EventModal = (props) => {
+const EventModal = (props: { onClosePath: string }) => {
   const { onClosePath } = props;
   const router = useRouter();
-  const [remainingTime, setRemainingTime] = useState("");
+  const [remainingTime, setRemainingTime] = useState<string | null>("");
   const [btnTxt, setBtnTxt] = useState("Register Now");
   const authCtx = useContext(AuthContext);
   const [isMicroLoading, setIsMicroLoading] = useState(false);
-  const [alert, setAlert] = useState(null);
-  const { eventId } = useParams();
+  const [alert, setAlert] = useState<AlertProps | null>(null);
+  const { eventId } = useParams<{ eventId: string }>();
   const [shouldNavigate, setShouldNavigate] = useState(false);
   const [navigatePath, setNavigatePath] = useState("/");
   const [isLoading, setIsLoading] = useState(true);
-  const [info, setInfo] = useState({});
-  const [data, setData] = useState({});
+  // Both start empty and are filled from the fetched event.
+  const [info, setInfo] = useState<EventInfo>({});
+  const [data, setData] = useState<FormRecord>({} as FormRecord);
   const [isRegisteredInRelatedEvents, setIsRegisteredInRelatedEvents] =
     useState(false);
-  const [pastEvents, setPastEvents] = useState([]);
-  const [ongoingEvents, setOngoingEvents] = useState([]);
+  const [pastEvents, setPastEvents] = useState<FormRecord[]>([]);
+  const [ongoingEvents, setOngoingEvents] = useState<FormRecord[]>([]);
 
   const [imageLoaded, setImageLoaded] = useState(false);
 
@@ -65,7 +68,7 @@ const EventModal = (props) => {
       try {
         const response = await api.get("/api/form/getAllForms");
         if (response.status === 200) {
-          const fetchedEvents = response.data.events;
+          const fetchedEvents: FormRecord[] = response.data.events;
           // Separate ongoing and past events
           const ongoing = fetchedEvents.filter(
             (event) => !event.info.isEventPast
@@ -75,10 +78,11 @@ const EventModal = (props) => {
           setOngoingEvents(ongoing);
           setPastEvents(past);
 
-          const eventData = response.data?.events.find((e) => e.id === eventId);
+          const eventData = fetchedEvents.find((e) => e.id === eventId);
           // console.log("fetched event modal test:", eventData);
-          setData(eventData);
-          setInfo(eventData?.info);
+          // An unknown id stores undefined here, as it always did.
+          setData(eventData as FormRecord);
+          setInfo(eventData?.info as EventInfo);
         } else {
           setAlert({
             type: "error",
@@ -137,12 +141,12 @@ const EventModal = (props) => {
   }, [info.regDateAndTime]);
 
   //Calculating data of event
-  const dateStr = info.eventDate;
+  const dateStr = info.eventDate as string;
   const date = new Date(dateStr);
 
   const day = date.getDate();
 
-  const getOrdinalSuffix = (day) => {
+  const getOrdinalSuffix = (day: number) => {
     if (day > 3 && day < 21) return "th"; // Handles 4-20
     switch (day % 10) {
       case 1:
@@ -165,7 +169,7 @@ const EventModal = (props) => {
   const calculateRemainingTime = () => {
     // Parse the regDateAndTime received from backend
     const regStartDate = parse(
-      info.regDateAndTime,
+      info.regDateAndTime as string,
       "MMMM do yyyy, h:mm:ss a",
       new Date()
     );
@@ -230,7 +234,7 @@ const EventModal = (props) => {
     let isRegisteredInRelatedEvents = false;
     if (registeredEventIds.length > 0 && relatedEventIds.length > 0) {
       isRegisteredInRelatedEvents = relatedEventIds.some((relatedEventId) =>
-        registeredEventIds.includes(relatedEventId)
+        registeredEventIds.includes(relatedEventId as string)
       );
     }
 
@@ -467,7 +471,7 @@ const EventModal = (props) => {
                         />
                       )}
                       <img
-                        srcSet={info.eventImg}
+                        srcSet={info.eventImg ?? undefined}
                         className={EventCardModal.img}
                         style={{
                           display: imageLoaded ? "block" : "none",
@@ -565,7 +569,6 @@ const EventModal = (props) => {
                             <>
                               <div style={{ fontSize: "0.85rem" }}>Closed</div>{" "}
                               <IoIosLock
-                                alt=""
                                 style={{
                                   marginLeft: "0px",
                                   fontSize: "1.2rem",
@@ -582,7 +585,6 @@ const EventModal = (props) => {
                             <>
                               <div style={{ fontSize: "0.9rem" }}>Locked</div>{" "}
                               <IoIosLock
-                                alt=""
                                 style={{ marginLeft: "0px", fontSize: "1rem" }}
                               />
                             </>

@@ -9,15 +9,19 @@ import { FaRegArrowAltCircleRight } from "react-icons/fa";
 import useWindowWidth from "../../utils/hooks/useWindowWidth";
 import { ComponentLoading } from "../../microInteraction";
 import Link from "next/link";
+import type { Member } from "../../types/member";
+
+/** /api/user/fetchTeam rows always carry a name and a role. */
+type TeamRow = Member & { name: string; access: string };
 
 const Team = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  const [teamMembers, setTeamMembers] = useState([]);
-  const [access, setAccess] = useState([]);
-  const [error, setError] = useState(null);
+  const [teamMembers, setTeamMembers] = useState<TeamRow[]>([]);
+  const [access, setAccess] = useState<string[]>([]);
+  const [error, setError] = useState<{ message: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const windowWidth = useWindowWidth();
 
@@ -27,12 +31,14 @@ const Team = () => {
         const response = await api.get("/api/user/fetchTeam");
 
         if (response.status === 200) {
-          const validMembers = response.data.data.filter(
-            (member) => member.name !== null
+          const validMembers: TeamRow[] = response.data.data.filter(
+            (member: TeamRow) => member.name !== null
           );
 
           const sortedMembers = validMembers.sort((a, b) => {
-            if (b.year !== a.year) return b.year - a.year;
+            // Years are text ("2nd"), so this is usually NaN, which sort
+            // treats as a tie; Number() spells out the coercion `-` did.
+            if (b.year !== a.year) return Number(b.year) - Number(a.year);
             return a.name.localeCompare(b.name);
           });
 
@@ -59,7 +65,7 @@ const Team = () => {
 
         if (response.status === 200) {
           const filteredAccess = response.data.data.filter(
-            (accessType) =>
+            (accessType: string) =>
               !["ADMIN", "USER", "ALUMNI", "EX_MEMBER"].includes(accessType)
           );
           setAccess(filteredAccess);
@@ -99,14 +105,14 @@ const Team = () => {
     "DEPUTY_DIRECTOR_HUMAN_RESOURCE",
   ];
 
-  const extractTeamFromAccess = (access) => {
+  const extractTeamFromAccess = (access: string) => {
     if (access.startsWith("SENIOR_EXECUTIVE_")) {
       return access.replace("SENIOR_EXECUTIVE_", "");
     }
     return access;
   };
 
-  const getDisplayRole = (access) => {
+  const getDisplayRole = (access: string) => {
     const teamCode = extractTeamFromAccess(access);
     let role = teamCode
       .split("_")
@@ -138,7 +144,7 @@ const Team = () => {
     (member) => !boardAccessCodes.includes(member.access)
   );
 
-  const roleMap = access.reduce((map, code) => {
+  const roleMap = access.reduce<Record<string, string[]>>((map, code) => {
     if (!boardAccessCodes.includes(code)) {
       const displayRole = getDisplayRole(code);
       const teamCode = extractTeamFromAccess(code);
@@ -179,7 +185,13 @@ const Team = () => {
       return order.indexOf(a.role) - order.indexOf(b.role);
     });
 
-  const TeamSection = ({ title, members }) => {
+  const TeamSection = ({
+    title,
+    members,
+  }: {
+    title?: React.ReactNode;
+    members: TeamRow[];
+  }) => {
     const membersPerRow = windowWidth < 500 ? 2 : 4;
     const remainder = members.length % membersPerRow;
 

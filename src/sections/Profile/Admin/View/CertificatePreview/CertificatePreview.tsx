@@ -14,7 +14,12 @@ import { useRouter, useParams } from "next/navigation";
 
 const CertificatesPreview = () => {
   const authCtx = useContext(AuthContext);
-  const params = useParams();
+  const params = useParams<{
+    id?: string;
+    eventId?: string;
+    formId?: string;
+    eventTitle?: string;
+  }>();
   const eventId = params?.id ?? params?.eventId ?? params?.formId;
   const eventTitle = params?.eventTitle ?? "Event Name";
   const router = useRouter();
@@ -71,7 +76,8 @@ const CertificatesPreview = () => {
       const response = await api.post(
         "/api/certificate/testCertificateSending",
         {
-          eventId: eventData.id,
+          // A missing id throws here and lands in the catch below, as before.
+          eventId: eventData!.id,
           name,
           subject,
           email: recipientEmail,

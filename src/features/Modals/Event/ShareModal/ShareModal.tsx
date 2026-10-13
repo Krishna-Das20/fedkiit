@@ -5,7 +5,13 @@ import { ShareSocial } from "../../../../components/ShareSocial/ShareSocial";
 import style from "./styles/ShareModal.module.scss";
 import { X } from "lucide-react";
 
-const Share = ({ onClose, urlpath, teamData }) => {
+type ShareProps = {
+  onClose: () => void;
+  urlpath?: string;
+  teamData?: { teamCode?: string; teamName?: string } | null;
+};
+
+const Share = ({ onClose, urlpath, teamData }: ShareProps) => {
   const shareUrl = urlpath || teamData?.teamCode || "";
   const title = teamData?.teamName ? `Share ${teamData.teamName}` : "Share Event";
 

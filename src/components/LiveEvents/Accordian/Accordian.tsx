@@ -5,12 +5,14 @@ import styles from "./styles/Accordion.module.scss";
 import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 
-const Accordion = ({ data }) => {
-  const [activeIndex, setActiveIndex] = useState(null);
+export type AccordionEntry = { title: string; content: React.ReactNode };
+
+const Accordion = ({ data }: { data: AccordionEntry[] }) => {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [visibleCount, setVisibleCount] = useState(3); // Initial number of visible items
   const [showAll, setShowAll] = useState(false); // Track if all items are shown
 
-  const toggleAccordion = (index) => {
+  const toggleAccordion = (index: number) => {
     setActiveIndex(activeIndex === index ? null : index);
   };
 
@@ -31,7 +33,17 @@ const Accordion = ({ data }) => {
 
   const itemsToShow = data.slice(0, visibleCount);
 
-  const AccordionItem = ({ item, index, activeIndex, toggleAccordion }) => {
+  const AccordionItem = ({
+    item,
+    index,
+    activeIndex,
+    toggleAccordion,
+  }: {
+    item: AccordionEntry;
+    index: number;
+    activeIndex: number | null;
+    toggleAccordion: (index: number) => void;
+  }) => {
     const { ref, inView } = useInView({
       threshold: 0.1,
       triggerOnce: true,

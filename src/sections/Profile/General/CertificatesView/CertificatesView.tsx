@@ -8,13 +8,18 @@ import { api } from "../../../../services";
 import { ComponentLoading } from "../../../../microInteraction";
 import { Send } from "lucide-react";
 import Link from "next/link";
+import type { FormRecord } from "@/src/types/form";
+import type { MyCertificate } from "@/src/types/certificate";
+
+/** Older stored forms also carry a Mongo-style `_id`. */
+type ListedForm = FormRecord & { _id?: string };
 
 const Events = () => {
   const authCtx = useContext(AuthContext);
-  const [events, setEvents] = useState([]);
-  const [myCertificates, setMyCertificates] = useState([]);
+  const [events, setEvents] = useState<ListedForm[]>([]);
+  const [myCertificates, setMyCertificates] = useState<MyCertificate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<{ message: string } | null>(null);
   const viewPath = "/profile/Events";
   const SendCertificatePath = "/profile/events/SendCertificate";
   const analyticsPath = "/profile/events/Analytics";
@@ -48,9 +53,10 @@ const Events = () => {
     const fetchMyCertificates = async () => {
       try {
         const response = await api.get("/api/certificate/myCertificates");
-        const certificates = response.data?.certificates ?? [];
+        const certificates: MyCertificate[] = response.data?.certificates ?? [];
         setMyCertificates(
-          [...certificates].sort((a, b) => new Date(b.eventDate) - new Date(a.eventDate)),
+          // A missing date sorts as the epoch, which is what new Date(null) gave.
+          [...certificates].sort((a, b) => new Date(b.eventDate ?? 0).getTime() - new Date(a.eventDate ?? 0).getTime()),
         );
       } catch (error) {
         setError({
@@ -75,7 +81,7 @@ const Events = () => {
         const userEvents = authCtx.user.regForm;
 
         if (response.status === 200) {
-          let fetchedEvents = response.data.events;
+          const fetchedEvents: ListedForm[] = response.data.events;
           if (authCtx?.user?.access !== "USER") {
             // Set events for non-users
             setEvents(sortEventsByDate(fetchedEvents));
@@ -107,7 +113,7 @@ const Events = () => {
         //   setEvents(sortEventsByDate(localEvents));
         // } else {
         //   const filteredEvents = localEvents.filter((event) =>
-        userEvents.includes(event._id)
+        //     userEvents.includes(event._id)
         //   );
         //   setEvents(sortEventsByDate(filteredEvents));
         // }
@@ -119,13 +125,13 @@ const Events = () => {
     fetchEventsData();
   }, [authCtx?.user?.email, canManageCertificates]);
 
-  const sortEventsByDate = (events) => {
-    return events.sort((a, b) => new Date(b.info.eventDate) - new Date(a.info.eventDate));
+  const sortEventsByDate = (events: ListedForm[]) => {
+    return events.sort((a, b) => new Date(b.info.eventDate as string).getTime() - new Date(a.info.eventDate as string).getTime());
   };
 
-  const formatDate = (dateString) => {
-    const options = { day: "2-digit", month: "2-digit", year: "numeric" };
-    return new Date(dateString)
+  const formatDate = (dateString: string | undefined) => {
+    const options: Intl.DateTimeFormatOptions = { day: "2-digit", month: "2-digit", year: "numeric" };
+    return new Date(dateString as string)
       .toLocaleDateString("en-GB", options)
       .replace(/\//g, "-");
   };

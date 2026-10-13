@@ -3,8 +3,18 @@
 import React from "react";
 import styles from "../styles/TeamManagement.module.scss";
 import { FaCrown, FaTrash } from "react-icons/fa";
+import type { TeamMember } from "../../../types/team";
 
-const MemberCard = ({ member, isCurrentUserLeader, isCardLeader, isCurrentUser, onRemove, isRegistrationOpen }) => {
+type MemberCardProps = {
+    member: TeamMember;
+    isCurrentUserLeader: boolean;
+    isCardLeader: boolean;
+    isCurrentUser: boolean;
+    onRemove?: (email: string, name: string | null) => void;
+    isRegistrationOpen: boolean;
+};
+
+const MemberCard = ({ member, isCurrentUserLeader, isCardLeader, isCurrentUser, onRemove, isRegistrationOpen }: MemberCardProps) => {
     // Generate initials for avatar fallback
     const initials = member.name
         ? member.name
@@ -21,7 +31,7 @@ const MemberCard = ({ member, isCurrentUserLeader, isCardLeader, isCurrentUser, 
         >
             <div className={styles.memberAvatar}>
                 {member.img ? (
-                    <img src={member.img} alt={member.name} />
+                    <img src={member.img} alt={member.name ?? undefined} />
                 ) : (
                     <div className={styles.avatarFallback}>{initials}</div>
                 )}

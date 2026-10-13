@@ -3,21 +3,28 @@
 import React, { useState } from "react";
 import styles from "../styles/TeamManagement.module.scss";
 import { IoMailOutline, IoLinkOutline, IoKeyOutline, IoCopyOutline, IoCheckmark, IoLogoWhatsapp } from "react-icons/io5";
+import type { TeamInviteLink } from "../../../types/team";
 
-const InviteSection = ({ onInviteEmail, onGetInviteLink, teamCode }) => {
+type InviteSectionProps = {
+    onInviteEmail: (email: string) => Promise<void>;
+    onGetInviteLink: () => Promise<TeamInviteLink | null>;
+    teamCode: string;
+};
+
+const InviteSection = ({ onInviteEmail, onGetInviteLink, teamCode }: InviteSectionProps) => {
     const [activeTab, setActiveTab] = useState("email");
     const [inviteEmail, setInviteEmail] = useState("");
     const [sendingEmail, setSendingEmail] = useState(false);
 
     // Link state
-    const [inviteLinkData, setInviteLinkData] = useState(null);
+    const [inviteLinkData, setInviteLinkData] = useState<TeamInviteLink | null>(null);
     const [linkLoading, setLinkLoading] = useState(false);
     const [linkCopied, setLinkCopied] = useState(false);
 
     // [v2] Team Code tab commented out — users now join via browse/request flow
     // const [codeCopied, setCodeCopied] = useState(false);
 
-    const handleSendEmail = async (e) => {
+    const handleSendEmail = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!inviteEmail.trim()) return;
 

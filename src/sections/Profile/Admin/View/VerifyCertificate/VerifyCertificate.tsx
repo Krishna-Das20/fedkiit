@@ -9,16 +9,27 @@ import { CheckCircle } from "lucide-react";
 import Share from "../../../../../features/Modals/Event/ShareModal/ShareModal";
 import shareOutline from "../../../../../assets/images/shareOutline.svg";
 import { useParams, useSearchParams } from "next/navigation";
+import type { ApiError } from "@/src/types/api";
+
+type VerifiedCertificate = {
+  imageSrc: string;
+  certificateId: string;
+  name: string;
+  email: string;
+  event: string;
+  date: string;
+};
 
 const VerifyCertificate = () => {
   // Next returns the params object itself, not React Router's [params, setter]
   // pair. Destructuring it as an array yields undefined and crashes on `.get`.
   const searchParams = useSearchParams();
   const certificateId = searchParams.get("id");
-  const { issuedCertificateId } = useParams();
-  const [certificateData, setCertificateData] = useState(null);
+  const { issuedCertificateId } = useParams<{ issuedCertificateId: string }>();
+  const [certificateData, setCertificateData] =
+    useState<VerifiedCertificate | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -61,7 +72,7 @@ const VerifyCertificate = () => {
         }
       } catch (err) {
         const errorMsg =
-          err?.response?.data?.message ||
+          (err as ApiError)?.response?.data?.message ||
           "Certificate not found or has been revoked.";
         setError(errorMsg);
       } finally {
@@ -124,6 +135,9 @@ const VerifyCertificate = () => {
     );
   }
 
+  // Loaded without an error, so the certificate is set.
+  const certificate = certificateData!;
+
   return (
     <div className={styles.container}>
       <h1 className={styles.title}>
@@ -132,7 +146,7 @@ const VerifyCertificate = () => {
 
       <div className={styles.contentWrapper}>
         <div className={styles.imageContainer}>
-          <img src={certificateData.imageSrc} alt="Verified Certificate" />
+          <img src={certificate.imageSrc} alt="Verified Certificate" />
         </div>
 
         <div className={styles.detailsContainer}>
@@ -144,20 +158,20 @@ const VerifyCertificate = () => {
               </tr>
               <tr>
                 <th>Name:</th>
-                <td>{certificateData.name}</td>
+                <td>{certificate.name}</td>
               </tr>
               <tr>
                 <th>Event:</th>
-                <td>{certificateData.event}</td>
+                <td>{certificate.event}</td>
               </tr>
               <tr>
                 <th>Email:</th>
-                <td>{certificateData.email}</td>
+                <td>{certificate.email}</td>
               </tr>
               {/* <tr>
                 <th>Event Date:</th>
                 <td>
-                  {new Date(certificateData.date).toLocaleDateString("en-US", {
+                  {new Date(certificate.date).toLocaleDateString("en-US", {
                     year: "numeric",
                     month: "long",
                     day: "numeric",

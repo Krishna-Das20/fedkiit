@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import PropTypes from "prop-types";
 import styles from "./styles/HeroGallery.module.scss";
 import { cdn } from "../../utils/cloudinary";
 
 const INTERVAL_MS = 3200;
 
-function getSlot(offset) {
+type GalleryImage = { image: string; title?: string };
+
+function getSlot(offset: number) {
   if (offset === 0) return "active";
   if (offset === -1) return "prev";
   if (offset === 1) return "next";
@@ -15,13 +16,13 @@ function getSlot(offset) {
   return "farNext";
 }
 
-function HeroGallery({ images }) {
+function HeroGallery({ images }: { images: GalleryImage[] }) {
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
   const count = images.length;
 
   const goTo = useCallback(
-    (index) => {
+    (index: number) => {
       setCurrent(((index % count) + count) % count);
     },
     [count]
@@ -142,14 +143,5 @@ function HeroGallery({ images }) {
     </div>
   );
 }
-
-HeroGallery.propTypes = {
-  images: PropTypes.arrayOf(
-    PropTypes.shape({
-      image: PropTypes.string.isRequired,
-      title: PropTypes.string,
-    })
-  ).isRequired,
-};
 
 export default HeroGallery;

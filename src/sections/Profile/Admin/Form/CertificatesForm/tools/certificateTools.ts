@@ -1,6 +1,7 @@
 "use client";
 
 import { api } from "../../../../../../services";
+import type { ApiError } from "../../../../../../types/api";
 // import AuthContext from "../../../../../../context/AuthContext";
 // import { useContext } from "react";
 
@@ -8,7 +9,11 @@ import { api } from "../../../../../../services";
 // getEventByFormId/createOrganisationEvent flow does not exist in the migrated
 // Next.js backend, so prefer the direct eventId path instead of creating an
 // intermediate form-based lookup.
-const accessOrCreateEventByFormId = async (formId, token) => {
+const accessOrCreateEventByFormId = async (
+  formId: string | null | undefined,
+  // Kept for the callers' signature; nothing is fetched any more.
+  token?: string | null
+) => {
   try {
     if (!formId) return null;
     return { id: formId, certificates: [{ id: formId }] };
@@ -18,7 +23,10 @@ const accessOrCreateEventByFormId = async (formId, token) => {
   }
 };
 
-const getCertificatePreview = async (formId, token) => {
+const getCertificatePreview = async (
+  formId: string | null | undefined,
+  token: string | null
+) => {
   try {
     if (!formId) {
       console.warn("No event id was provided for certificate preview");
@@ -42,7 +50,17 @@ const getCertificatePreview = async (formId, token) => {
   }
 };
 
-const sendBatchMail = async ({ formId, subject, htmlContent, token }) => {
+const sendBatchMail = async ({
+  formId,
+  subject,
+  htmlContent,
+  token,
+}: {
+  formId: string;
+  subject: string;
+  htmlContent: string;
+  token: string | null;
+}) => {
   try {
     const response = await api.post(
       "/api/certificate/sendBatchMails",
@@ -70,6 +88,13 @@ const generatedAndSendCertificate = async ({
   body,
   frequency,
   token,
+}: {
+  eventId: string;
+  attendees?: { email: string; name?: string }[] | null;
+  subject?: string;
+  body?: string;
+  frequency?: number | string;
+  token: string | null;
 }) => {
   try {
     const recipients = (attendees ?? []).map((attendee) => ({
@@ -105,11 +130,30 @@ const generatedAndSendCertificate = async ({
     return response;
   } catch (error) {
     console.error("Failed to generate and send certificates:", error);
-    return error?.response ?? { status: 500, data: { message: "Failed to send certificates" } };
+    return (
+      (error as ApiError)?.response ?? {
+        status: 500,
+        data: { message: "Failed to send certificates" },
+      }
+    );
   }
 };
 
-const testCertificateSending = async ({ eventId, email, name, subject, body, token }) => {
+const testCertificateSending = async ({
+  eventId,
+  email,
+  name,
+  subject,
+  body,
+  token,
+}: {
+  eventId: string;
+  email: string;
+  name: string;
+  subject?: string;
+  body?: string;
+  token: string | null;
+}) => {
   try {
     const response = await api.post(
       "/api/certificate/testCertificateSending",
@@ -126,8 +170,9 @@ const testCertificateSending = async ({ eventId, email, name, subject, body, tok
     );
     return response;
   } catch (error) {
-    console.warn("Test certificate was not sent:", error.response?.data?.message);
-    return error.response;
+    const apiError = error as ApiError;
+    console.warn("Test certificate was not sent:", apiError.response?.data?.message);
+    return apiError.response;
   }
 };
 
