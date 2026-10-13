@@ -1,108 +1,115 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { CheckCircle } from "lucide-react";
 
 import { api } from "../../../../../services";
 import { ComponentLoading } from "../../../../../microInteraction";
 import styles from "./styles/VerifyCertificate.module.scss";
-import { CheckCircle } from "lucide-react";
-import Share from "../../../../../features/Modals/Event/ShareModal/ShareModal";
-import shareOutline from "../../../../../assets/images/shareOutline.svg";
-import { useParams, useSearchParams } from "next/navigation";
 
 const VerifyCertificate = () => {
-  // Next returns the params object itself, not React Router's [params, setter]
-  // pair. Destructuring it as an array yields undefined and crashes on `.get`.
   const searchParams = useSearchParams();
   const certificateId = searchParams.get("id");
-  const { issuedCertificateId } = useParams();
+
   const [certificateData, setCertificateData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showShareModal, setShowShareModal] = useState(false);
+  const [currentUrl, setCurrentUrl] = useState("");
   const [copied, setCopied] = useState(false);
 
-  const [currentUrl, setCurrentUrl] = useState("");
-
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setCurrentUrl(window.location.href);
-    }
+    setCurrentUrl(window.location.href);
   }, []);
 
   useEffect(() => {
-    if (!certificateId) {
-      setError("No certificate ID provided.");
-      setLoading(false);
-      return;
-    }
+    let cancelled = false;
 
     const fetchCertificate = async () => {
-      try {
-        const response = await api.post("/api/certificate/verifyCertificate", {
-          id: certificateId,
-        });
-
-        if (
-          response.data &&
-          response.data.imageSrc &&
-          response.data.certificate
-        ) {
-          setCertificateData({
-            imageSrc: response.data.imageSrc,
-            certificateId: response.data.certificate.certificateId,
-            name:
-              response.data.certificate.fieldValues?.name ||
-              response.data.certificate.fieldValues?.Name ||
-              response.data.certificate.fieldValues?.recipient_name ||
-              "N/A",
-            email: response.data.certificate.email || "N/A",
-            event: response.data.event?.name || "N/A",
-            date: response.data.event?.createdAt || "N/A",
-          });
-        } else {
-          setError("Invalid certificate data.");
-        }
-      } catch (err) {
-        const errorMsg =
-          err?.response?.data?.message ||
-          "Certificate not found or has been revoked.";
-        setError(errorMsg);
-      } finally {
+      if (!certificateId) {
+        setError("No certificate ID provided.");
         setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+      setCertificateData(null);
+
+      try {
+        const response = await api.post(
+          "/api/certificate/verifyCertificate",
+          { id: certificateId }
+        );
+
+        if (cancelled) return;
+
+        const data = response.data;
+        const certificate = data?.certificate;
+
+        if (!data?.imageSrc || !certificate) {
+          setError("Invalid certificate data.");
+          return;
+        }
+
+        setCertificateData({
+          imageSrc: data.imageSrc,
+          certificateId: certificate.certificateId || certificateId,
+          name:
+            certificate.fieldValues?.name ||
+            certificate.fieldValues?.Name ||
+            certificate.fieldValues?.recipient_name ||
+            "N/A",
+          email: certificate.email || "N/A",
+          event: data.event?.name || "N/A",
+          date: data.event?.createdAt || null,
+        });
+      } catch (err) {
+        if (cancelled) return;
+
+        setError(
+          err?.response?.data?.message ||
+            "Certificate not found or has been revoked."
+        );
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchCertificate();
+
+    return () => {
+      cancelled = true;
+    };
   }, [certificateId]);
 
   const handleDownload = () => {
-    if (certificateData?.imageSrc) {
-      const link = document.createElement("a");
-      link.href = certificateData.imageSrc;
-      link.download = `Certificate_${certificateData.certificateId}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    if (!certificateData?.imageSrc) return;
+
+    const link = document.createElement("a");
+    link.href = certificateData.imageSrc;
+    link.download = `Certificate_${certificateData.certificateId}.png`;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const copyLink = async () => {
+    const url = currentUrl || window.location.href;
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError("Unable to copy the link. Please copy it from your browser.");
     }
-  };
-
-  const copyLink = () => {
-    const url = currentUrl || (typeof window !== "undefined" ? window.location.href : "");
-    if (url && navigator?.clipboard) {
-      navigator.clipboard.writeText(url).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000); // revert back after 2 seconds
-      });
-    }
-  };
-
-  const openShareModal = () => {
-    setShowShareModal(true);
-  };
-
-  const closeShareModal = () => {
-    setShowShareModal(false);
   };
 
   if (loading) {
@@ -114,16 +121,17 @@ const VerifyCertificate = () => {
     );
   }
 
-  if (error) {
+  if (error || !certificateData) {
     return (
       <div className={styles.container}>
         <h1 className={styles.title}>
           Certificate <span>Verification</span>
         </h1>
+
         <div className={styles.errorContainer}>
           <div className={styles.errorIcon}>✕</div>
           <h3>Invalid Certificate ID</h3>
-            <p>{error}</p>
+          <p>{error || "Certificate data could not be loaded."}</p>
         </div>
       </div>
     );
@@ -137,7 +145,10 @@ const VerifyCertificate = () => {
 
       <div className={styles.contentWrapper}>
         <div className={styles.imageContainer}>
-          <img src={certificateData.imageSrc} alt="Verified Certificate" />
+          <img
+            src={certificateData.imageSrc}
+            alt="Verified Certificate"
+          />
         </div>
 
         <div className={styles.detailsContainer}>
@@ -145,30 +156,38 @@ const VerifyCertificate = () => {
             <tbody>
               <tr>
                 <th>Certificate ID:</th>
-                <td>{certificateId}</td>
+                <td>{certificateData.certificateId}</td>
               </tr>
+
               <tr>
                 <th>Name:</th>
                 <td>{certificateData.name}</td>
               </tr>
+
               <tr>
                 <th>Event:</th>
                 <td>{certificateData.event}</td>
               </tr>
+
               <tr>
                 <th>Email:</th>
                 <td>{certificateData.email}</td>
               </tr>
-              {/* <tr>
-                <th>Event Date:</th>
-                <td>
-                  {new Date(certificateData.date).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </td>
-              </tr> */}
+
+              {certificateData.date && (
+                <tr>
+                  <th>Event Date:</th>
+                  <td>
+                    {new Date(
+                      certificateData.date
+                    ).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
 
@@ -176,17 +195,23 @@ const VerifyCertificate = () => {
             <div className={styles.actionButtons}>
               <div className={styles.verifiedTag}>
                 <CheckCircle />
-                <span style={{ color: "white" }}>Verified by FEDKIIT</span>
+                <span style={{ color: "white" }}>
+                  Verified by FEDKIIT
+                </span>
               </div>
+
               <div className={styles.buttonGroup}>
-                <button className={styles.downloadBtn} onClick={handleDownload}>
+                <button
+                  className={styles.downloadBtn}
+                  onClick={handleDownload}
+                >
                   Download
                 </button>
-                {/* <button className={styles.shareBtn} onClick={openShareModal}>
-                  <img style={{ width: "20px", height: "20px" }} src={shareOutline.src} alt="Share" />
-                  Share
-                </button> */}
-                <button className={styles.downloadBtn} onClick={copyLink}>
+
+                <button
+                  className={styles.downloadBtn}
+                  onClick={copyLink}
+                >
                   {copied ? "Copied..." : "Copy Link"}
                 </button>
               </div>
@@ -194,10 +219,6 @@ const VerifyCertificate = () => {
           </div>
         </div>
       </div>
-
-      {showShareModal && (
-        <Share onClose={closeShareModal} urlpath={currentUrl} />
-      )}
     </div>
   );
 };
