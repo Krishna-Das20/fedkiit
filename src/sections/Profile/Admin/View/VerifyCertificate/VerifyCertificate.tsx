@@ -15,7 +15,6 @@ type VerifiedCertificate = {
   name: string;
   email: string;
   event: string;
-  date: string | null;
 };
 
 const VerifyCertificate = () => {
@@ -27,7 +26,9 @@ const VerifyCertificate = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUrl, setCurrentUrl] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
+    "idle"
+  );
 
   useEffect(() => {
     setCurrentUrl(window.location.href);
@@ -73,7 +74,6 @@ const VerifyCertificate = () => {
             "N/A",
           email: certificate.email || "N/A",
           event: data.event?.name || "N/A",
-          date: data.event?.createdAt || null,
         });
       } catch (err) {
         if (cancelled) return;
@@ -113,13 +113,16 @@ const VerifyCertificate = () => {
   const copyLink = async () => {
     const url = currentUrl || window.location.href;
 
+    // A failed copy (no clipboard access, or an insecure context) only changes
+    // the button: going through setError would swap the verified certificate
+    // for the "Invalid Certificate ID" screen.
     try {
       await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setCopyState("copied");
     } catch {
-      setError("Unable to copy the link. Please copy it from your browser.");
+      setCopyState("failed");
     }
+    setTimeout(() => setCopyState("idle"), 2000);
   };
 
   if (loading) {
@@ -184,20 +187,11 @@ const VerifyCertificate = () => {
                 <td>{certificateData.email}</td>
               </tr>
 
-              {certificateData.date && (
-                <tr>
-                  <th>Event Date:</th>
-                  <td>
-                    {new Date(
-                      certificateData.date
-                    ).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </td>
-                </tr>
-              )}
+              {/*
+                No "Event Date" row: the only date the verify API returns is
+                when the certificate's event was created in the studio, not
+                when the event took place.
+              */}
             </tbody>
           </table>
 
@@ -222,7 +216,11 @@ const VerifyCertificate = () => {
                   className={styles.downloadBtn}
                   onClick={copyLink}
                 >
-                  {copied ? "Copied..." : "Copy Link"}
+                  {copyState === "copied"
+                    ? "Copied..."
+                    : copyState === "failed"
+                      ? "Copy failed"
+                      : "Copy Link"}
                 </button>
               </div>
             </div>

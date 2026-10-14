@@ -65,18 +65,22 @@ export async function verifyCertificate(certificateId: string) {
     select: { id: true, name: true, description: true, createdAt: true },
   });
 
-  // Keep the exact template used at issuance. Only legacy rows without a
-  // template link may fall back to the event's current template.
-  const template = issued.certificateId
-    ? await prisma.certificate.findUnique({
-      where: { id: issued.certificateId },
-      select: { template: true, fields: true },
-    })
-    : await prisma.certificate.findFirst({
+  // Keep the exact template used at issuance. Legacy rows without a template
+  // link, and rows whose template has since been deleted (one in production),
+  // fall back to the event's current template: the participant's details are
+  // still drawn onto it, which beats failing a genuine certificate.
+  const template =
+    (issued.certificateId
+      ? await prisma.certificate.findUnique({
+        where: { id: issued.certificateId },
+        select: { template: true, fields: true },
+      })
+      : null) ??
+    (await prisma.certificate.findFirst({
       where: { eventId: issued.eventId },
       orderBy: { createdAt: "desc" },
       select: { template: true, fields: true },
-    });
+    }));
 
   const templateUrl =
     (issued.fieldValues as any)?._templateUrl ||

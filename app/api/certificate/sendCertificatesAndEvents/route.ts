@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { body, expressError, handle, json } from "@/lib/api/express";
 import { getCurrentUser, isAdmin } from "@/lib/auth/access";
+import { emailEquals } from "@/lib/utils/email";
 
 /**
  * POST /api/certificate/sendCertificatesAndEvents
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
     const issued = await prisma.issuedCertificates.findMany({
       // Older issuance records may preserve the casing entered by an admin,
       // while account emails are normalized to lowercase at login.
-      where: { email: { equals: email, mode: "insensitive" } },
+      where: { email: emailEquals(email) },
       select: {
         id: true,
         fieldValues: true,
