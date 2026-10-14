@@ -27,7 +27,8 @@ import {
  * Instead the template URL and the field coordinates are returned, and the
  * client composites onto a canvas — which is exactly what CertificatesForm.jsx
  * and CertificatePreview.jsx already do for the live preview, using html2canvas.
- * The stored `imageSrc` is still honoured when a row already has one.
+ * Verification always renders the issued row against its pinned template so a
+ * bare preview/template can never be mistaken for a participant's certificate.
  */
 
 export type CertificateField = {
@@ -64,6 +65,10 @@ export async function verifyCertificate(certificateId: string) {
     select: { id: true, name: true, description: true, createdAt: true },
   });
 
+  // Keep the exact template used at issuance. Legacy rows without a template
+  // link, and rows whose template has since been deleted (one in production),
+  // fall back to the event's current template: the participant's details are
+  // still drawn onto it, which beats failing a genuine certificate.
   const template =
     (issued.certificateId
       ? await prisma.certificate.findUnique({
@@ -87,32 +92,43 @@ export async function verifyCertificate(certificateId: string) {
       : template?.fields || []
   ) as unknown as CertificateField[];
 
-  let compositedImageSrc = issued.imageSrc;
-  if (!compositedImageSrc && templateUrl) {
-    try {
-      const rawValues = (issued.fieldValues as Record<string, string>) || {};
-      const certBuffer = await compositeCertificate({
-        templateUrl,
-        fields: configuredFields,
-        fieldValues: {
-          ...rawValues,
-          name: rawValues.name || rawValues.Name || issued.email,
-        },
-        certificateId: issued.id,
-      });
-      if (certBuffer) {
-        compositedImageSrc = `data:image/png;base64,${certBuffer.toString("base64")}`;
-      }
-    } catch (e) {
-      console.error("[verifyCertificate] failed to composite image:", e);
+  if (!templateUrl) {
+    throw new ApiError(409, "The certificate template for this issued certificate is unavailable");
+  }
+
+  let compositedImageSrc: string | null = null;
+  try {
+    const certBuffer = await compositeCertificate({
+      templateUrl,
+      fields: configuredFields,
+      fieldValues: {
+        ...rawValues,
+        name:
+          rawValues.name ||
+          rawValues.Name ||
+          rawValues.recipient_name ||
+          issued.email,
+      },
+      certificateId: issued.id,
+    });
+    if (certBuffer) {
+      compositedImageSrc = `data:image/png;base64,${certBuffer.toString("base64")}`;
     }
+  } catch (error) {
+    console.error("[verifyCertificate] failed to composite issued certificate:", error);
+  }
+
+  // Never show the bare template as though it were the participant's real
+  // certificate. Fail verification visibly if a personalized render failed.
+  if (!compositedImageSrc) {
+    throw new ApiError(409, "The issued certificate could not be rendered. Please contact the federation.");
   }
 
   return {
     // The frontend reads `imageSrc` at the top level
-    imageSrc: compositedImageSrc ?? templateUrl ?? null,
+    imageSrc: compositedImageSrc,
     certificate: {
-      certificateId: issued.certificateId ?? issued.id,
+      certificateId: issued.id,
       email: issued.email,
       fieldValues: issued.fieldValues,
       fields: configuredFields,

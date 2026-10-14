@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { body, expressError, handle, json } from "@/lib/api/express";
 import { getCurrentUser, isAdmin } from "@/lib/auth/access";
+import { emailEquals } from "@/lib/utils/email";
 
 /**
  * POST /api/certificate/sendCertificatesAndEvents
@@ -35,14 +36,21 @@ export async function POST(request: Request) {
     }
 
     const issued = await prisma.issuedCertificates.findMany({
-      where: { email },
-      include: { event: true },
+      // Older issuance records may preserve the casing entered by an admin,
+      // while account emails are normalized to lowercase at login.
+      where: { email: emailEquals(email) },
+      select: {
+        id: true,
+        fieldValues: true,
+        event: { select: { id: true, formId: true } },
+      },
+      orderBy: { id: "desc" },
     });
 
-    // Shape kept identical to Express: [{ cert, event }], with rows whose event
-    // has since been deleted dropped rather than returned as null.
+    // Shape kept identical to Express: [{ cert, event }]. Drop deleted
+    // certificates and rows whose event has since been removed.
     const certandevent = issued
-      .filter((row) => row.event)
+      .filter((row) => row.event && !(row.fieldValues as Record<string, unknown>)?._isDeleted)
       .map(({ event, ...cert }) => ({ cert, event }));
 
     return json({ certandevent });

@@ -16,10 +16,13 @@ export type CertificateEvent = {
   [key: string]: unknown;
 };
 
-/** One entry of /api/certificate/sendCertificatesAndEvents. */
+/**
+ * One entry of /api/certificate/sendCertificatesAndEvents: only what the
+ * profile's events table needs to link a form to its certificate.
+ */
 export type CertificateWithEvent = {
-  cert: IssuedCertificate;
-  event: CertificateEvent;
+  cert: Pick<IssuedCertificate, "id" | "fieldValues">;
+  event: Pick<CertificateEvent, "id" | "formId">;
 };
 
 /** One entry of /api/certificate/myCertificates. */
