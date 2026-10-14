@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { expressError, handle, json } from "@/lib/api/express";
 import { getCurrentUser } from "@/lib/auth/access";
+import { emailEquals } from "@/lib/utils/email";
 
 /**
  * GET /api/certificate/myCertificates
@@ -20,7 +21,7 @@ export async function GET() {
 
     const issued = await prisma.issuedCertificates.findMany({
       // Older batches stored addresses as uploaded, so match case-insensitively.
-      where: { email: { equals: user.email.trim(), mode: "insensitive" } },
+      where: { email: emailEquals(user.email) },
       select: {
         id: true,
         eventId: true,
