@@ -39,6 +39,13 @@ jobs:
       - name: Run Microsoft Security DevOps
         id: msdo
         uses: microsoft/security-devops-action@v1
+        # The tools MSDO finds applicable here, minus ESLint. Its ESLint uses
+        # the SDL config, which only lints .js files, and the codebase has
+        # been TypeScript since the JSX-to-TSX conversion: with nothing left to
+        # lint, ESLint exits with an error and fails the whole scan. The
+        # project's own `npm run lint` covers the TypeScript.
+        with:
+          tools: antimalware,checkov,templateanalyzer
 
       - name: Upload SARIF results
         if: always()

@@ -106,11 +106,19 @@ export default function RootLayout({
           {children}
         </Providers>
 
-        {/* Razorpay checkout, loaded in index.html on the original site. */}
+        {/*
+          Razorpay checkout, loaded in index.html on the original site.
+          Commented out until paid registration is built: nothing opens a
+          checkout yet, and on every page load the script frames
+          api.razorpay.com, which the CSP's frame-src blocks, logging an
+          error. When re-enabling it, add https://api.razorpay.com and
+          https://checkout.razorpay.com to frame-src in next.config.ts.
+
         <Script
           src="https://checkout.razorpay.com/v1/checkout.js"
           strategy="lazyOnload"
         />
+        */}
         {/* Google Analytics, same measurement id as the original. */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-027MLWYPTL"

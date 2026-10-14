@@ -1,0 +1,129 @@
+"use client";
+
+/**
+ * @fileoverview Chatbot Service for FED Frontend
+ * @module services/chatbot/chatbotService
+ * @description API client for chatbot backend communication
+ */
+
+import { api } from '../index';
+import type { ApiError } from '../../types/api';
+
+/** One earlier turn, sent along so the reply has context. */
+export type ChatHistoryItem = { role: string; text: string };
+
+/**
+ * Chatbot API Service
+ * Communicates with FED Backend chatbot endpoints
+ */
+const chatbotService = {
+    /**
+     * Send a message to the chatbot and get AI response
+     * @param {string} message - User's message
+     * @param {Array} conversationHistory - Optional conversation history for context
+     * @returns {Promise<Object>} Response object
+     */
+    sendMessage: async (
+        message: string,
+        conversationHistory: ChatHistoryItem[] = []
+    ) => {
+        try {
+            const response = await api.post('/api/chatbot/message', {
+                message,
+                conversationHistory
+            }, {
+                withCredentials: true // Send cookies for optional auth
+            });
+
+            return response.data;
+        } catch (caught) {
+            const error = caught as ApiError;
+            console.error('[Chatbot Service] Error:', error);
+
+            // Handle auth required response
+            if (error.response?.data?.requiresAuth) {
+                return {
+                    success: false,
+                    requiresAuth: true,
+                    message: error.response.data.message
+                };
+            }
+
+            return {
+                success: false,
+                response: 'Sorry, I encountered an error connecting to the server. Please try again.',
+                error: error.message
+            };
+        }
+    },
+
+    /**
+     * Check chatbot service health
+     * @returns {Promise<Object>} Health status
+     */
+    checkHealth: async () => {
+        try {
+            const response = await api.get('/api/chatbot/health');
+            return response.data;
+        } catch (error) {
+            console.error('[Chatbot Service] Health check failed:', error);
+            return {
+                status: 'unhealthy',
+                error: (error as Error).message
+            };
+        }
+    },
+
+    /**
+     * Send email through chatbot to FED
+     * @param {string} content - Email content
+     * @param {string} senderName - Optional sender name
+     * @param {string} senderEmail - Optional sender email
+     * @returns {Promise<Object>} Response object
+     */
+    sendEmail: async (
+        content: string,
+        senderName: string | null = null,
+        senderEmail: string | null = null
+    ) => {
+        try {
+            const response = await api.post('/api/chatbot/send-email', {
+                content,
+                senderName,
+                senderEmail
+            }, {
+                withCredentials: true
+            });
+            return response.data;
+        } catch (error) {
+            console.error('[Chatbot Service] Email error:', error);
+            return {
+                success: false,
+                message: 'Failed to send email. Please try again.'
+            };
+        }
+    },
+
+    /**
+     * Fetch dynamic event-centric chatbot question flows and category actions
+     * @returns {Promise<Object>} Flow data object
+     */
+    getFlows: async () => {
+        try {
+            const response = await api.get('/api/chatbot/flow');
+            return response.data;
+        } catch (error) {
+            console.error('[Chatbot Service] Error fetching flows:', error);
+            const chatbotName = process.env.NEXT_PUBLIC_CHATBOT_NAME || 'FEDI';
+            return {
+                success: false,
+                chatbotName,
+                categories: [],
+                featuredPrompts: [],
+                teaserMessage: `Explore FED & its Events! Ask ${chatbotName}`
+            };
+        }
+    }
+};
+
+export default chatbotService;
