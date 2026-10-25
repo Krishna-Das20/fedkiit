@@ -304,30 +304,35 @@ const TeamCard = ({
 
   return (
     <div className={`${styles.teamMember} ${customStyles.teamMember || ""}`}>
-      {showSkeleton ? (
-        <TeamCardSkeleton customStyles={customStyles} />
-      ) : (
-        <div className={styles.teamMemberInner}>
-          <PixelTransition
-            firstContent={firstContent}
-            secondContent={secondContent}
-            gridSize={gridSize}
-            pixelColor={pixelColor}
-            mosaic={mosaic}
-            animationStepDuration={animationStepDuration}
-            pattern={pattern}
-            randomness={0.3}
-            pixelAnimation={pixelAnimation}
-            pixelShape={pixelShape}
-            gap={0}
-            fps={0}
-            trigger="hover"
-            once={false}
-            className={styles.pixelCard}
-            style={{ width: "100%", height: "100%" }}
-          />
-        </div>
-      )}
+      {/*
+        The card mounts behind the skeleton (hidden) rather than after it, so
+        the photo starts loading straight away instead of 500ms later.
+        PixelTransition sizes its canvas when the card becomes visible.
+      */}
+      {showSkeleton && <TeamCardSkeleton customStyles={customStyles} />}
+      <div
+        className={styles.teamMemberInner}
+        style={{ display: showSkeleton ? "none" : "block" }}
+      >
+        <PixelTransition
+          firstContent={firstContent}
+          secondContent={secondContent}
+          gridSize={gridSize}
+          pixelColor={pixelColor}
+          mosaic={mosaic}
+          animationStepDuration={animationStepDuration}
+          pattern={pattern}
+          randomness={0.3}
+          pixelAnimation={pixelAnimation}
+          pixelShape={pixelShape}
+          gap={0}
+          fps={0}
+          trigger="hover"
+          once={false}
+          className={styles.pixelCard}
+          style={{ width: "100%", height: "100%" }}
+        />
+      </div>
     </div>
   );
 };

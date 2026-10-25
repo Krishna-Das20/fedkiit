@@ -3,6 +3,7 @@
 import React, {
   useEffect,
   useRef,
+  useState,
   type CSSProperties,
   type ReactNode,
   type PointerEvent as ReactPointerEvent,
@@ -91,7 +92,7 @@ export default function PixelTransition({
   const hoverRef = useRef(false);
   const focusRef = useRef(false);
   const pointerRef = useRef('mouse');
-  const initialRef = useRef(active ? 1 : 0);
+  const [initialFace] = useState(() => (active ? 1 : 0));
   const settings = {
     gridSize: clamp(Math.round(gridSize), 2, 80),
     pixelColor,
@@ -106,7 +107,9 @@ export default function PixelTransition({
     once,
   };
   const settingsRef = useRef(settings);
-  settingsRef.current = settings;
+  useEffect(() => {
+    settingsRef.current = settings;
+  });
 
   useEffect(() => {
     const root = rootRef.current;
@@ -136,9 +139,9 @@ export default function PixelTransition({
 
     const state: InternalState = {
       progress: 0,
-      base: initialRef.current,
-      goal: initialRef.current,
-      shown: initialRef.current,
+      base: initialFace,
+      goal: initialFace,
+      shown: initialFace,
       seed: 1,
       originX: 0.5,
       originY: 0.5,
@@ -249,8 +252,8 @@ export default function PixelTransition({
             const radius = (size / 2) * (1 + 0.45 * seal);
             path.moveTo(cx + radius, cy);
             path.arc(cx, cy, radius, 0, Math.PI * 2);
-          } else if (s.shape === 'rounded' && seal < 1 && typeof (path as unknown as { roundRect?: Function }).roundRect === 'function') {
-            (path as unknown as { roundRect: Function }).roundRect(cx - size / 2, cy - size / 2, size, size, size * 0.3 * (1 - seal));
+          } else if (s.shape === 'rounded' && seal < 1 && typeof path.roundRect === 'function') {
+            path.roundRect(cx - size / 2, cy - size / 2, size, size, size * 0.3 * (1 - seal));
           } else if (size >= cell - 0.01) {
             const left = Math.round(x0);
             const upper = Math.round(y0);
@@ -348,7 +351,8 @@ export default function PixelTransition({
       controlRef.current = null;
       resizeObserver.disconnect();
     };
-  }, []);
+    // initialFace never changes after mount, so this still runs once.
+  }, [initialFace]);
 
   useEffect(() => {
     if (active === undefined) return;
@@ -448,14 +452,14 @@ export default function PixelTransition({
       <div
         ref={firstRef}
         className="pixelated-image-card__default"
-        style={{ visibility: initialRef.current === 0 ? undefined : 'hidden' }}
+        style={{ visibility: initialFace === 0 ? undefined : 'hidden' }}
       >
         {firstContent}
       </div>
       <div
         ref={secondRef}
         className="pixelated-image-card__active"
-        style={{ visibility: initialRef.current === 1 ? undefined : 'hidden' }}
+        style={{ visibility: initialFace === 1 ? undefined : 'hidden' }}
       >
         {secondContent}
       </div>
