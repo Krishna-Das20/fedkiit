@@ -158,7 +158,8 @@
 
 .sessionButtons button {
   padding: 0.6rem 1.2rem;
-  border: 1px solid var(--primary);
+  // --primary is a gradient, which a border cannot use; this is its orange.
+  border: 1px solid #FF8A00;
   border-radius: 8px;
   background: transparent;
   cursor: pointer;

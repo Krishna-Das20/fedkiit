@@ -8,26 +8,14 @@ import useWindowWidth from "../../utils/hooks/useWindowWidth";
 import { ComponentLoading } from "../../microInteraction";
 import type { Member, MemberExtra } from "../../types/member";
 
-const UNKNOWN_SESSION = "Unknown";
+// Alumni whose roll number gives no session (no roll number on record).
+const OTHER_SESSION = "Others";
 
 type EnrichedAlumni = {
   member: Member;
   session: string;
   domain: string;
   rank: number;
-};
-
-const getSessionFromRollNumber = (
-  rollNumber: string | number | null | undefined
-): string | null => {
-  const roll = String(rollNumber ?? "").trim();
-
-  if (!/^\d{2}/.test(roll)) return null;
-
-  const batchYear = parseInt(roll.substring(0, 2), 10);
-  const startYear = 2000 + batchYear + 2;
-
-  return `${startYear}-${String(startYear + 1).slice(-2)}`;
 };
 
 const sortByName = (list: Member[]): Member[] =>
@@ -79,7 +67,9 @@ const domainOrder = [
   "Operations",
   "PR And Finance",
   "Human Resource",
-  "Other / Unclassified",
+  "Senior Executives",
+  "Executives",
+  "Members",
 ];
 
 const domainRank = (domain: string): number => {
@@ -106,8 +96,16 @@ const getDesignation = (member: Member): string => {
     .toUpperCase();
 };
 
+// Designations that name no domain fall back to the person's role, so the
+// page shows "Senior Executives" rather than one "unclassified" heading.
+const getRoleGroup = (designation: string): string => {
+  if (designation.includes("SENIOR EXECUTIVE")) return "Senior Executives";
+  if (designation.includes("EXECUTIVE")) return "Executives";
+  return "Members";
+};
+
 const getDomainFromDesignation = (designation: string): string => {
-  if (!designation) return "Other / Unclassified";
+  if (!designation) return getRoleGroup(designation);
 
   if (
     designation.includes("BOARD OF DIRECTORS") ||
@@ -135,13 +133,13 @@ const getDomainFromDesignation = (designation: string): string => {
     return "Human Resource";
   }
 
-  return "Other / Unclassified";
+  return getRoleGroup(designation);
 };
 
 const getMemberRank = (domain: string, designation: string): number => {
   if (domain === "Board Of Directors") {
-    if (designation.includes("PRESIDENT")) return 0;
     if (designation.includes("VICE")) return 1;
+    if (designation.includes("PRESIDENT")) return 0;
     if (designation.includes("DEPUTY")) return 3;
     return 2;
   }
@@ -151,8 +149,8 @@ const getMemberRank = (domain: string, designation: string): number => {
 
 const sortSessions = (list: string[]): string[] =>
   [...list].sort((a, b) => {
-    if (a === UNKNOWN_SESSION) return 1;
-    if (b === UNKNOWN_SESSION) return -1;
+    if (a === OTHER_SESSION) return 1;
+    if (b === OTHER_SESSION) return -1;
     return b.localeCompare(a);
   });
 
@@ -208,8 +206,7 @@ const Alumni = () => {
 
         return {
           member,
-          session:
-            getSessionFromRollNumber(member.rollNumber) ?? UNKNOWN_SESSION,
+          session: member.session ?? OTHER_SESSION,
           domain,
           rank: getMemberRank(domain, designation),
         };
@@ -222,17 +219,16 @@ const Alumni = () => {
     [enriched]
   );
 
-  useEffect(() => {
-    if (sessions.length > 0 && !selectedSession) {
-      setSelectedSession(sessions[0]);
-    }
-  }, [sessions, selectedSession]);
+  const activeSession =
+    selectedSession && sessions.includes(selectedSession)
+      ? selectedSession
+      : sessions[0] ?? null;
 
   const groupedAlumni = useMemo(() => {
     const groups: Record<string, EnrichedAlumni[]> = {};
 
     enriched
-      .filter((entry) => entry.session === selectedSession)
+      .filter((entry) => entry.session === activeSession)
       .forEach((entry) => {
         if (!groups[entry.domain]) {
           groups[entry.domain] = [];
@@ -252,7 +248,7 @@ const Alumni = () => {
           )
           .map((entry) => entry.member),
       }));
-  }, [enriched, selectedSession]);
+  }, [enriched, activeSession]);
 
   return (
     <div className={styles.Alumni}>
@@ -291,7 +287,7 @@ const Alumni = () => {
                 key={session}
                 onClick={() => setSelectedSession(session)}
                 className={
-                  selectedSession === session ? styles.activeSession : ""
+                  activeSession === session ? styles.activeSession : ""
                 }
               >
                 {session}
