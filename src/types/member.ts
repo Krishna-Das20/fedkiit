@@ -27,4 +27,6 @@ export type Member = {
   github?: string;
   know?: string;
   designation?: string;
+  /** fetchAlumni only: the session an alumnus is listed under, e.g. "2024-25". */
+  session?: string | null;
 };
